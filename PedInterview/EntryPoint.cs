@@ -9,6 +9,7 @@ namespace PedInterview
     {
         public static void Main()
         {
+            Settings.LoadSettings();
             var civQuestionsAndAnswers = XMLReader.ReadXML("PedInterview.xml");
             var copQuestionsAndAnswers = XMLReader.ReadXML("CopInterview.xml");
             var civMainMenu = MenuManager.BuildCivMenu(civQuestionsAndAnswers);
@@ -24,12 +25,12 @@ namespace PedInterview
                 // Keyboard
                 if (Settings.ModifierKey == System.Windows.Forms.Keys.None)
                 {
-                    if (Game.LocalPlayer.Character.IsOnFoot && Game.IsKeyDown(Settings.ToggleKey) && !menuPool.IsAnyMenuOpen())
+                    if (Game.LocalPlayer.Character.IsOnFoot && Game.IsKeyDown(Settings.ToggleKey))
                     {
                         DisplayPedInteractMenu();
                     }
                 }
-                else if (Game.LocalPlayer.Character.IsOnFoot && Game.IsKeyDownRightNow(Settings.ModifierKey) && Game.IsKeyDown(Settings.ToggleKey) && !menuPool.IsAnyMenuOpen())
+                else if (Game.LocalPlayer.Character.IsOnFoot && Game.IsKeyDownRightNow(Settings.ModifierKey) && Game.IsKeyDown(Settings.ToggleKey))
                 {
                     DisplayPedInteractMenu();
                 }
@@ -37,12 +38,12 @@ namespace PedInterview
                 // Controller
                 if (Settings.ModifierButton == ControllerButtons.None)
                 {
-                    if (Game.LocalPlayer.Character.IsOnFoot && Game.IsControllerButtonDown(Settings.ToggleButton) && !menuPool.IsAnyMenuOpen())
+                    if (Game.LocalPlayer.Character.IsOnFoot && Game.IsControllerButtonDown(Settings.ToggleButton))
                     {
                         DisplayPedInteractMenu();
                     }
                 }
-                else if (Game.LocalPlayer.Character.IsOnFoot && Game.IsControllerButtonDownRightNow(Settings.ModifierButton) && Game.IsControllerButtonDown(Settings.ToggleButton) && !menuPool.IsAnyMenuOpen())
+                else if (Game.LocalPlayer.Character.IsOnFoot && Game.IsControllerButtonDownRightNow(Settings.ModifierButton) && Game.IsControllerButtonDown(Settings.ToggleButton))
                 {
                     DisplayPedInteractMenu();
                 }
