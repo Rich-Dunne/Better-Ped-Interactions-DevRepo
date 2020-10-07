@@ -56,7 +56,7 @@ namespace PedInterview
             {
                 foreach (Ped p in Game.LocalPlayer.Character.GetNearbyPeds(16))
                 {
-                    if (Game.LocalPlayer.Character.IsOnFoot && p != Game.LocalPlayer.Character && p.DistanceTo(Game.LocalPlayer.Character.FrontPosition) <= 2f)
+                    if (Game.LocalPlayer.Character.IsOnFoot && p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo(Game.LocalPlayer.Character.FrontPosition) <= 1.5f)
                     {
                         if (p.RelationshipGroup == RelationshipGroup.Cop)
                         {
@@ -64,6 +64,22 @@ namespace PedInterview
                         }
                         else
                         {
+                            // Get ped's attention
+                            // Stop ped
+                            p.Tasks.Clear();
+                            p.BlockPermanentEvents = true;
+
+                            // Have ped face player
+                            if (p.Heading < 180)
+                            {
+                                p.Tasks.AchieveHeading(Game.LocalPlayer.Character.Heading + 180);
+                            }
+                            else
+                            {
+                                p.Tasks.AchieveHeading(Game.LocalPlayer.Character.Heading - 180);
+                            }
+
+                            // Collect ped
                             civMainMenu.Visible = !civMainMenu.Visible;
                         }
                         break;
