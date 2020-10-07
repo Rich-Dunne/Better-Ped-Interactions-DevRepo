@@ -44,6 +44,7 @@ namespace PedInterview
                         p.Tasks.Clear();
                         p.Dismiss();
                     }
+                    civMainMenu.Close();
                 }
                 else
                 {
@@ -176,14 +177,18 @@ namespace PedInterview
                 float textWidth = Rage.Native.NativeFunction.Natives.x85F061DA64ED2F67<float>(true); // _END_TEXT_COMMAND_GET_WIDTH
                 float padding = 0.00390625f * 2; // typical padding used in RNUI
 
-                width = Math.Max(textWidth + padding, UIMenu.DefaultWidth);
+                var newWidth = Math.Max(textWidth + padding, UIMenu.DefaultWidth);
+
                 // Minimum width is set to prevent the scroller from clipping the menu item name
-                if (width < 0.25)
+                if (newWidth < 0.25)
                 {
-                    width = 0.25f;
+                    newWidth = 0.25f;
+                }
+                if(newWidth > width)
+                {
+                    width = newWidth;
                 }
             }
-
             return width;
         }
     }
