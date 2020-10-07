@@ -3,6 +3,9 @@ using RAGENativeUI;
 using RAGENativeUI.Elements;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Linq;
+using System.Drawing;
 
 namespace PedInterview
 {
@@ -10,28 +13,17 @@ namespace PedInterview
     {
         public static MenuPool menuPool = new MenuPool();
         private static UIMenu civMainMenu, copMainMenu;
-        private static UIMenuItem questionItem;
+        private static UIMenuItem questionItem, dismiss;
         private static UIMenuListScrollerItem<string> civQuestionCategories, copQuestionCategories;
 
-        internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<string, List<string>>> civQuestionsAndAnswers)
+        internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> civQuestionsAndAnswers)
+        //internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<string, List<string>>> civQuestionsAndAnswers)
         {
             civMainMenu = new UIMenu("Civilian Ped Interview", "");
             menuPool.Add(civMainMenu);
 
             civMainMenu.AddItem(civQuestionCategories = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civQuestionsAndAnswers.Keys));
-            foreach (KeyValuePair<string, Dictionary<string, List<string>>> kvp in civQuestionsAndAnswers)
-            {
-                //Game.LogTrivial($"kvp.key: {kvp.Key}");
-                //Game.LogTrivial($"civQuestionCategories.SelectedItem: {civQuestionCategories.SelectedItem}");
-                if (kvp.Key == civQuestionCategories.SelectedItem)
-                {
-                    foreach (KeyValuePair<string, List<string>> kvp2 in kvp.Value)
-                    {
-                        //Game.LogTrivial($"kvp2.key: {kvp2.Key}");
-                        civMainMenu.AddItem(questionItem = new UIMenuItem(kvp2.Key));
-                    }
-                }
-            }
+            populateCivMenu();
             civMainMenu.RefreshIndex();
 
             civMainMenu.Width = SetMenuWidth(civMainMenu);
@@ -46,16 +38,28 @@ namespace PedInterview
 
             void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
             {
-                foreach (KeyValuePair<string, Dictionary<string, List<string>>> kvp in civQuestionsAndAnswers)
+                if(selectedItem == dismiss)
                 {
-                    foreach (KeyValuePair<string, List<string>> kvp2 in kvp.Value)
+                    foreach(Ped p in Game.LocalPlayer.Character.GetNearbyPeds(16))
                     {
-                        if (kvp2.Key == selectedItem.Text)
+                        p.Tasks.Clear();
+                        p.Dismiss();
+                    }
+                }
+                else
+                {
+                    foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> questionCategory in civQuestionsAndAnswers)
+                    {
+                        foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
                         {
-                            Random r = new Random();
-                            int i = r.Next(kvp2.Value.Count);
-                            //Game.DisplaySubtitle($"Count: {kvp2.Value.Count}, Response: {kvp2.Value[i]}");
-                            Game.DisplaySubtitle($"{kvp2.Value[i]}");
+                            //Game.LogTrivial($"questionResponsePair.Key.Value: {questionResponsePair.Key.Attribute("question").Value}");
+                            if (questionResponsePair.Key.Attribute("question").Value == selectedItem.Text)
+                            {
+                                Random r = new Random();
+                                int i = r.Next(questionResponsePair.Value.Count);
+                                //Game.DisplaySubtitle($"Count: {kvp2.Value.Count}, Response: {kvp2.Value[i]}");
+                                Game.DisplaySubtitle($"{questionResponsePair.Value[i]}");
+                            }
                         }
                     }
                 }
@@ -68,43 +72,45 @@ namespace PedInterview
                     civMainMenu.RemoveItemAt(1);
                 }
 
-                foreach (KeyValuePair<string, Dictionary<string, List<string>>> kvp in civQuestionsAndAnswers)
+                populateCivMenu();
+                civMainMenu.Width = SetMenuWidth(civMainMenu);
+            }
+
+            void populateCivMenu()
+            {
+                foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> questionCategory in civQuestionsAndAnswers)
                 {
-                    //Game.LogTrivial($"kvp.key: {kvp.Key}");
-                    //Game.LogTrivial($"Scroller text: {scroller.Text}");
-                    //Game.LogTrivial($"civQuestionCategories.SelectedItem: {civQuestionCategories.SelectedItem}");
-                    if (kvp.Key == civQuestionCategories.SelectedItem)
+                    if (questionCategory.Key == civQuestionCategories.SelectedItem)
                     {
-                        foreach (KeyValuePair<string, List<string>> kvp2 in kvp.Value)
+                        foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
                         {
-                            //Game.LogTrivial($"kvp2.key: {kvp2.Key}");
-                            civMainMenu.AddItem(questionItem = new UIMenuItem(kvp2.Key));
+                            civMainMenu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Key.Attribute("question").Value));
+                            var attribute = questionResponsePair.Key.Attributes().Where(x => x.Name == "type").FirstOrDefault();
+                            if (attribute != null)
+                            {
+                                if (attribute.Value.ToLower() == "interview")
+                                {
+                                    questionItem.ForeColor = Color.LimeGreen;
+                                }
+                                else if (attribute.Value.ToLower() == "interrogation")
+                                {
+                                    questionItem.ForeColor = Color.IndianRed;
+                                }
+                            }
                         }
                     }
                 }
-                civMainMenu.Width = SetMenuWidth(civMainMenu);
+                civMainMenu.AddItem(dismiss = new UIMenuItem("Dismiss ped"));
             }
         }
 
-        internal static UIMenu BuildCopMenu(Dictionary<string, Dictionary<string, List<string>>> copQuestionsAndAnswers)
+        internal static UIMenu BuildCopMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> copQuestionsAndAnswers)
         {
             copMainMenu = new UIMenu("Cop Ped Interview", "");
             menuPool.Add(copMainMenu);
 
             copMainMenu.AddItem(copQuestionCategories = new UIMenuListScrollerItem<string>("Category", "The category of the questions", copQuestionsAndAnswers.Keys));
-            foreach (KeyValuePair<string, Dictionary<string, List<string>>> kvp in copQuestionsAndAnswers)
-            {
-                //Game.LogTrivial($"kvp.key: {kvp.Key}");
-                //Game.LogTrivial($"civQuestionCategories.SelectedItem: {civQuestionCategories.SelectedItem}");
-                if (kvp.Key == copQuestionCategories.SelectedItem)
-                {
-                    foreach (KeyValuePair<string, List<string>> kvp2 in kvp.Value)
-                    {
-                        //Game.LogTrivial($"kvp2.key: {kvp2.Key}");
-                        copMainMenu.AddItem(questionItem = new UIMenuItem(kvp2.Key));
-                    }
-                }
-            }
+            populateCopMenu();
             copMainMenu.RefreshIndex();
 
             copMainMenu.Width = SetMenuWidth(copMainMenu);
@@ -119,16 +125,16 @@ namespace PedInterview
 
             void CopInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
             {
-                foreach (KeyValuePair<string, Dictionary<string, List<string>>> kvp in copQuestionsAndAnswers)
+                foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> category in copQuestionsAndAnswers)
                 {
-                    foreach (KeyValuePair<string, List<string>> kvp2 in kvp.Value)
+                    foreach (KeyValuePair<XElement, List<XElement>> question in category.Value)
                     {
-                        if (kvp2.Key == selectedItem.Text)
+                        if (question.Key.Attribute("question").Value == selectedItem.Text)
                         {
                             Random r = new Random();
-                            int i = r.Next(kvp2.Value.Count);
+                            int i = r.Next(question.Value.Count);
                             //Game.DisplaySubtitle($"Count: {kvp2.Value.Count}, Response: {kvp2.Value[i]}");
-                            Game.DisplaySubtitle($"{kvp2.Value[i]}");
+                            Game.DisplaySubtitle($"{question.Value[i]}");
                         }
                     }
                 }
@@ -141,21 +147,22 @@ namespace PedInterview
                     copMainMenu.RemoveItemAt(1);
                 }
 
-                foreach (KeyValuePair<string, Dictionary<string, List<string>>> kvp in copQuestionsAndAnswers)
+                populateCopMenu();
+                copMainMenu.Width = SetMenuWidth(copMainMenu);
+            }
+
+            void populateCopMenu()
+            {
+                foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> category in copQuestionsAndAnswers)
                 {
-                    //Game.LogTrivial($"kvp.key: {kvp.Key}");
-                    //Game.LogTrivial($"Scroller text: {scroller.Text}");
-                    //Game.LogTrivial($"civQuestionCategories.SelectedItem: {civQuestionCategories.SelectedItem}");
-                    if (kvp.Key == copQuestionCategories.SelectedItem)
+                    if (category.Key == copQuestionCategories.SelectedItem)
                     {
-                        foreach (KeyValuePair<string, List<string>> kvp2 in kvp.Value)
+                        foreach (KeyValuePair<XElement, List<XElement>> question in category.Value)
                         {
-                            //Game.LogTrivial($"kvp2.key: {kvp2.Key}");
-                            copMainMenu.AddItem(questionItem = new UIMenuItem(kvp2.Key));
+                            copMainMenu.AddItem(questionItem = new UIMenuItem(question.Key.Attribute("question").Value));
                         }
                     }
                 }
-                copMainMenu.Width = SetMenuWidth(copMainMenu);
             }
         }
 
