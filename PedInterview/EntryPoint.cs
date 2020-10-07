@@ -60,12 +60,10 @@ namespace PedInterview
                     {
                         if (p.RelationshipGroup == RelationshipGroup.Cop)
                         {
-                            Game.LogTrivial($"Display cop menu");
                             copMainMenu.Visible = !copMainMenu.Visible;
                         }
                         else
                         {
-                            Game.LogTrivial($"Display civilian menu");
                             civMainMenu.Visible = !civMainMenu.Visible;
                         }
                         break;
