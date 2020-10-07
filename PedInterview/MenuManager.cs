@@ -17,7 +17,6 @@ namespace PedInterview
         private static UIMenuListScrollerItem<string> civQuestionCategories, copQuestionCategories;
 
         internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> civQuestionsAndAnswers)
-        //internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<string, List<string>>> civQuestionsAndAnswers)
         {
             civMainMenu = new UIMenu("Civilian Ped Interview", "");
             menuPool.Add(civMainMenu);
