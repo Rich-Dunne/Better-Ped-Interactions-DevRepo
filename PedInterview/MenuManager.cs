@@ -16,6 +16,10 @@ namespace PedInterview
         internal static UIMenuItem questionItem, rollWindowDown, exitVehicle, turnOffEngine, dismiss;
         private static UIMenuCheckboxItem followMe;
         private static UIMenuListScrollerItem<string> civQuestionCategories, copQuestionCategories;
+        private static List<KeyValuePair<XElement,List<XElement>>> usedQuestionResponsePairs = new List<KeyValuePair<XElement, List<XElement>>>();
+        private static List<XElement> usedResponses = new List<XElement>();
+        private static string responseType = null;
+        private static Random r = new Random();
 
         internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> civQuestionsAndAnswers)
         {
@@ -212,33 +216,86 @@ namespace PedInterview
 
         private static void FindMatchingQuestion(Dictionary<string, Dictionary<XElement, List<XElement>>> questionsAndAnswers, UIMenuListScrollerItem<string> questionCategories, UIMenuItem selectedItem)
         {
-            foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> questionCategory in questionsAndAnswers)
-            {
-                if (questionCategory.Key == questionCategories.SelectedItem)
-                {
-                    Game.LogTrivial($"questionCategory.Key: {questionCategory.Key}");
-                    Game.LogTrivial($"copQuestionCategories.SelectedItem: {questionCategories.SelectedItem}");
+            var matchingCategory = questionsAndAnswers.Where(x => x.Key == questionCategories.SelectedItem).FirstOrDefault();
+            var questionResponsePair = matchingCategory.Value.Where(x => x.Key.Attribute("question").Value == selectedItem.Text).FirstOrDefault();
+            GetPedResponse();
 
-                    foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
+            void GetPedResponse()
+            {
+                string gender = GetFocusedPedGender();
+
+
+                if (usedQuestionResponsePairs.Contains(questionResponsePair))
+                {
+                    RepeatResponse();
+                    return;
+                }
+
+                usedQuestionResponsePairs.Add(questionResponsePair);
+                XElement response = null;
+                if(responseType == null || responseType != null && GetResponseChance() == 3)
+                {
+                    response = questionResponsePair.Value[GetRandomValue()];
+                    usedResponses.Add(response);
+                    Game.LogTrivial($"Response added: {questionResponsePair.Value[GetRandomValue()]}");
+                }
+                else if (responseType != null && GetResponseChance() < 3)
+                {
+                    response = questionResponsePair.Value.Where(x => x.Attributes().Count() > 0 && x.Attribute("type").Value == responseType).FirstOrDefault();
+                    usedResponses.Add(response);
+                    Game.LogTrivial($"Response added: {response}");
+                }
+
+                //if(questionResponsePair.Value[randomValue].Attribute("type").Value == "lie")
+                Game.DisplaySubtitle($"~y~Unidentified {gender}: ~w~{response}");
+
+                var responseAttributes = response.Attributes();
+                foreach(XAttribute attribute in responseAttributes)
+                {
+                    Game.LogTrivial($"Response attribute: {attribute.Value}");
+                    responseType = attribute.Value;
+                }
+
+                void RepeatResponse()
+                {
+                    Game.LogTrivial($"This response was already used");
+                    if (GetRandomValue() % 2 == 0)
                     {
-                        Game.LogTrivial($"questionResponsePair.Key.Attribute(\"question\").Value: {questionResponsePair.Key.Attribute("question").Value}");
-                        Game.LogTrivial($"selectedItem.Text: {selectedItem.Text}");
-                        if (questionResponsePair.Key.Attribute("question").Value == selectedItem.Text)
-                        {
-                            GetPedResponse(questionResponsePair);
-                            break;
-                        }
+                        Game.DisplaySubtitle($"~y~Unidentified {gender}: ~w~I already told you, {questionResponsePair.Value.Where(x => x == usedResponses.FirstOrDefault()).FirstOrDefault()}");
+                    }
+                    else
+                    {
+                        Game.DisplaySubtitle($"~y~Unidentified {gender}: ~w~Did I s-s-stutter?");
                     }
                 }
+
+                int GetResponseChance()
+                {
+                    return r.Next(0, 4);
+                }
+
+                int GetRandomValue()
+                {
+                    Random r = new Random();
+                    return r.Next(questionResponsePair.Value.Count);
+                }
+            }
+        }
+
+        // Consider making FocusedPed class
+        private static string GetFocusedPedGender()
+        {
+            string gender = "male";
+            if (EntryPoint.focusedPed.IsMale)
+            {
+                gender = "male";
+            }
+            else
+            {
+                gender = "female";
             }
 
-            void GetPedResponse(KeyValuePair<XElement, List<XElement>> questionResponsePair)
-            {
-                Random r = new Random();
-                int i = r.Next(questionResponsePair.Value.Count);
-                //Game.DisplaySubtitle($"Count: {kvp2.Value.Count}, Response: {kvp2.Value[i]}");
-                Game.DisplaySubtitle($"{questionResponsePair.Value[i]}");
-            }
+            return gender;
         }
 
         private static float SetMenuWidth(UIMenu menu)
