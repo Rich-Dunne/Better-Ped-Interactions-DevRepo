@@ -10,6 +10,7 @@ namespace PedInterview
         internal static Keys ModifierKey = Keys.LShiftKey;
         internal static ControllerButtons ToggleButton = ControllerButtons.Y;
         internal static ControllerButtons ModifierButton = ControllerButtons.A;
+        internal static float InteractDistance = 1.5f;
 
         internal static void LoadSettings()
         {
@@ -20,6 +21,7 @@ namespace PedInterview
             ModifierKey = ini.ReadEnum("Keybindings", "ModifierKey", Keys.LShiftKey);
             ToggleButton = ini.ReadEnum("Keybindings", "ToggleButton", ControllerButtons.LeftShoulder);
             ModifierButton = ini.ReadEnum("Keybindings", "ModifierButton", ControllerButtons.DPadDown);
+            InteractDistance = (float)ini.ReadDouble("Other Settings", "InteractDistance", 2f);
         }
     }
 }
