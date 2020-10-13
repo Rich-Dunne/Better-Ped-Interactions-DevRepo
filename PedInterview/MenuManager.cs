@@ -13,7 +13,8 @@ namespace PedInterview
     {
         public static MenuPool menuPool = new MenuPool();
         private static UIMenu civMainMenu, copMainMenu;
-        private static UIMenuItem questionItem, dismiss;
+        internal static UIMenuItem questionItem, rollWindowDown, exitVehicle, turnOffEngine, dismiss;
+        private static UIMenuCheckboxItem followMe;
         private static UIMenuListScrollerItem<string> civQuestionCategories, copQuestionCategories;
 
         internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> civQuestionsAndAnswers)
@@ -31,37 +32,76 @@ namespace PedInterview
             civMainMenu.AllowCameraMovement = true;
 
             civMainMenu.OnItemSelect += CivInteract_OnItemSelected;
+            civMainMenu.OnCheckboxChange += CivInteract_OnCheckboxChanged;
             civMainMenu.OnScrollerChange += CivInteract_OnScrollerChanged;
 
             return civMainMenu;
 
-            void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
+            void CivInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
             {
-                if(selectedItem == dismiss)
+                Ped p = null;
+                if (EntryPoint.focusedPed && EntryPoint.focusedPed.IsAlive)
                 {
-                    foreach(Ped p in Game.LocalPlayer.Character.GetNearbyPeds(16))
-                    {
-                        p.Tasks.Clear();
-                        p.Dismiss();
-                    }
-                    civMainMenu.Close();
+                    p = EntryPoint.focusedPed;
                 }
                 else
                 {
-                    foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> questionCategory in civQuestionsAndAnswers)
+                    Game.LogTrivial($"The focused ped is invalid or dead.");
+                    return;
+                }
+                var collectedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
+
+                if (checkboxItem == followMe)
+                {
+                    if (followMe.Checked)
                     {
-                        foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
-                        {
-                            //Game.LogTrivial($"questionResponsePair.Key.Value: {questionResponsePair.Key.Attribute("question").Value}");
-                            if (questionResponsePair.Key.Attribute("question").Value == selectedItem.Text)
-                            {
-                                Random r = new Random();
-                                int i = r.Next(questionResponsePair.Value.Count);
-                                //Game.DisplaySubtitle($"Count: {kvp2.Value.Count}, Response: {kvp2.Value[i]}");
-                                Game.DisplaySubtitle($"{questionResponsePair.Value[i]}");
-                            }
-                        }
+                        collectedPed.FollowMe();
                     }
+                    else
+                    {
+                        collectedPed.StopFollowing();
+                    }
+                }
+            }
+
+            void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
+            {
+                Ped p = null;
+                if (EntryPoint.focusedPed && EntryPoint.focusedPed.IsAlive)
+                {
+                    p = EntryPoint.focusedPed;
+                }
+                else
+                {
+                    Game.LogTrivial($"The focused ped is invalid or dead.");
+                    return;
+                }
+                var collectedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
+
+                if (selectedItem == dismiss)
+                {
+                    collectedPed.Dismiss();
+                    civMainMenu.Close();
+                }
+
+                if(selectedItem == rollWindowDown && collectedPed.Ped.CurrentVehicle && collectedPed.Ped.CurrentVehicle.IsCar)
+                {
+                    collectedPed.RollDownWindow();
+                }
+
+                if(selectedItem == exitVehicle && collectedPed.Ped.CurrentVehicle)
+                {
+                    collectedPed.ExitVehicle();
+                }
+
+                if(selectedItem == turnOffEngine && p.CurrentVehicle && collectedPed.Ped.CurrentVehicle.Driver == collectedPed.Ped)
+                {
+                    collectedPed.TurnOffEngine();
+                }
+
+                if(civQuestionCategories.SelectedItem != "Ped Actions")
+                {
+                    FindMatchingQuestion(civQuestionsAndAnswers, civQuestionCategories, selectedItem);
                 }
             }
 
@@ -82,6 +122,19 @@ namespace PedInterview
                 {
                     if (questionCategory.Key == civQuestionCategories.SelectedItem)
                     {
+                        if(civQuestionCategories.SelectedItem == "Ped Actions")
+                        {
+                            civMainMenu.AddItem(rollWindowDown = new UIMenuItem("Roll down window", "Rolls down the ped's window"));
+                            rollWindowDown.ForeColor = Color.Gold;
+                            civMainMenu.AddItem(turnOffEngine = new UIMenuItem("Turn engine off", "Makes ped turn off the engine"));
+                            turnOffEngine.ForeColor = Color.Gold;
+                            civMainMenu.AddItem(exitVehicle = new UIMenuItem("Exit vehicle", "Makes ped exit the vehicle"));
+                            exitVehicle.ForeColor = Color.Gold;
+                            civMainMenu.AddItem(followMe = new UIMenuCheckboxItem("Follow me", false, "Makes ped follow the player"));
+                            followMe.ForeColor = Color.Gold;
+                            civMainMenu.AddItem(dismiss = new UIMenuItem("Dismiss ped"));
+                            dismiss.ForeColor = Color.Gold;
+                        }
                         foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
                         {
                             civMainMenu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Key.Attribute("question").Value));
@@ -96,11 +149,14 @@ namespace PedInterview
                                 {
                                     questionItem.ForeColor = Color.IndianRed;
                                 }
+                                else if(attribute.Value.ToLower() == "action")
+                                {
+                                    questionItem.ForeColor = Color.Gold;
+                                }
                             }
                         }
                     }
                 }
-                civMainMenu.AddItem(dismiss = new UIMenuItem("Dismiss ped"));
             }
         }
 
@@ -125,19 +181,7 @@ namespace PedInterview
 
             void CopInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
             {
-                foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> category in copQuestionsAndAnswers)
-                {
-                    foreach (KeyValuePair<XElement, List<XElement>> question in category.Value)
-                    {
-                        if (question.Key.Attribute("question").Value == selectedItem.Text)
-                        {
-                            Random r = new Random();
-                            int i = r.Next(question.Value.Count);
-                            //Game.DisplaySubtitle($"Count: {kvp2.Value.Count}, Response: {kvp2.Value[i]}");
-                            Game.DisplaySubtitle($"{question.Value[i]}");
-                        }
-                    }
-                }
+                FindMatchingQuestion(copQuestionsAndAnswers, copQuestionCategories, selectedItem);
             }
 
             void CopInteract_OnScrollerChanged(UIMenu sender, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
@@ -163,6 +207,37 @@ namespace PedInterview
                         }
                     }
                 }
+            }
+        }
+
+        private static void FindMatchingQuestion(Dictionary<string, Dictionary<XElement, List<XElement>>> questionsAndAnswers, UIMenuListScrollerItem<string> questionCategories, UIMenuItem selectedItem)
+        {
+            foreach (KeyValuePair<string, Dictionary<XElement, List<XElement>>> questionCategory in questionsAndAnswers)
+            {
+                if (questionCategory.Key == questionCategories.SelectedItem)
+                {
+                    Game.LogTrivial($"questionCategory.Key: {questionCategory.Key}");
+                    Game.LogTrivial($"copQuestionCategories.SelectedItem: {questionCategories.SelectedItem}");
+
+                    foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
+                    {
+                        Game.LogTrivial($"questionResponsePair.Key.Attribute(\"question\").Value: {questionResponsePair.Key.Attribute("question").Value}");
+                        Game.LogTrivial($"selectedItem.Text: {selectedItem.Text}");
+                        if (questionResponsePair.Key.Attribute("question").Value == selectedItem.Text)
+                        {
+                            GetPedResponse(questionResponsePair);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            void GetPedResponse(KeyValuePair<XElement, List<XElement>> questionResponsePair)
+            {
+                Random r = new Random();
+                int i = r.Next(questionResponsePair.Value.Count);
+                //Game.DisplaySubtitle($"Count: {kvp2.Value.Count}, Response: {kvp2.Value[i]}");
+                Game.DisplaySubtitle($"{questionResponsePair.Value[i]}");
             }
         }
 
