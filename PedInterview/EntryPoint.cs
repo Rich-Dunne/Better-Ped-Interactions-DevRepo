@@ -1,8 +1,8 @@
 ﻿using Rage;
 using RAGENativeUI;
+using RAGENativeUI.Elements;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 
 [assembly: Rage.Attributes.Plugin("Ped Interview", Author = "Rich", Description = "Dialogue menus to interact with peds.", PrefersSingleInstance = true)]
@@ -12,7 +12,8 @@ namespace PedInterview
     internal class EntryPoint
     {
         internal static List<CollectedPed> collectedPeds = new List<CollectedPed>();
-        internal static Ped focusedPed = null;
+        internal static CollectedPed focusedPed = null;
+        //internal static Ped focusedPed = null;
 
         public static void Main()
         {
@@ -49,7 +50,7 @@ namespace PedInterview
 
                 void CloseMenuIfPlayerTooFar()
                 {
-                    if (focusedPed && Game.LocalPlayer.Character.DistanceTo2D(focusedPed) > Settings.InteractDistance)
+                    if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following)
                     {
                         menuPool.CloseAllMenus();
                     }
@@ -71,7 +72,7 @@ namespace PedInterview
                     {
                         collectedPed = CollectCivPed(nearbyPed);
                     }
-                    focusedPed = collectedPed.Ped;
+                    focusedPed = collectedPed;
 
                     if (collectedPed.Ped.IsOnFoot && !collectedPed.Following)
                     {
@@ -87,14 +88,32 @@ namespace PedInterview
                     collectedPeds.Add(collectedPed);
                     Game.LogTrivial($"{p.Model.Name} collected.");
 
-                    focusedPed = collectedPed.Ped;
+                    focusedPed = collectedPed;
                     return collectedPed;
                 }
             }
 
             void DisableMenuItems()
             {
-                if (focusedPed && !focusedPed.CurrentVehicle)
+                if(focusedPed != null && focusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance)
+                {
+                    foreach(UIMenuItem item in civMainMenu.MenuItems)
+                    {
+                        if(item.Text != "Follow me")
+                        {
+                            item.Enabled = false;
+                        }
+                    }
+                }
+                else if(focusedPed != null && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) <= Settings.InteractDistance)
+                {
+                    foreach (UIMenuItem item in civMainMenu.MenuItems)
+                    {
+                        item.Enabled = true;
+                    }
+                }
+
+                if (focusedPed?.Ped && !focusedPed.Ped.CurrentVehicle)
                 {
                     MenuManager.rollWindowDown.Enabled = false;
                     MenuManager.turnOffEngine.Enabled = false;
@@ -104,7 +123,7 @@ namespace PedInterview
                 {
                     MenuManager.rollWindowDown.Enabled = true;
                     MenuManager.exitVehicle.Enabled = true;
-                    if(focusedPed && focusedPed.CurrentVehicle.Driver == focusedPed)
+                    if(focusedPed?.Ped && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
                     {
                         MenuManager.turnOffEngine.Enabled = true;
                     }
