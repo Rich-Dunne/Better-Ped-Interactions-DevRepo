@@ -44,9 +44,9 @@ namespace PedInterview
             void CivInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
             {
                 Ped p = null;
-                if (EntryPoint.focusedPed && EntryPoint.focusedPed.IsAlive)
+                if (EntryPoint.focusedPed.Ped && EntryPoint.focusedPed.Ped.IsAlive)
                 {
-                    p = EntryPoint.focusedPed;
+                    p = EntryPoint.focusedPed.Ped;
                 }
                 else
                 {
@@ -71,36 +71,36 @@ namespace PedInterview
             void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
             {
                 Ped p = null;
-                if (EntryPoint.focusedPed && EntryPoint.focusedPed.IsAlive)
+                if (EntryPoint.focusedPed.Ped && EntryPoint.focusedPed.Ped.IsAlive)
                 {
-                    p = EntryPoint.focusedPed;
+                    p = EntryPoint.focusedPed.Ped;
                 }
                 else
                 {
                     Game.LogTrivial($"The focused ped is invalid or dead.");
                     return;
                 }
-                var collectedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
+                var focusedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
 
                 if (selectedItem == dismiss)
                 {
-                    collectedPed.Dismiss();
+                    focusedPed.Dismiss();
                     civMainMenu.Close();
                 }
 
-                if(selectedItem == rollWindowDown && collectedPed.Ped.CurrentVehicle && collectedPed.Ped.CurrentVehicle.IsCar)
+                if(selectedItem == rollWindowDown && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
                 {
-                    collectedPed.RollDownWindow();
+                    focusedPed.RollDownWindow();
                 }
 
-                if(selectedItem == exitVehicle && collectedPed.Ped.CurrentVehicle)
+                if(selectedItem == exitVehicle && focusedPed.Ped.CurrentVehicle)
                 {
-                    collectedPed.ExitVehicle();
+                    focusedPed.ExitVehicle();
                 }
 
-                if(selectedItem == turnOffEngine && p.CurrentVehicle && collectedPed.Ped.CurrentVehicle.Driver == collectedPed.Ped)
+                if(selectedItem == turnOffEngine && p.CurrentVehicle && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
                 {
-                    collectedPed.TurnOffEngine();
+                    focusedPed.TurnOffEngine();
                 }
 
                 if(civQuestionCategories.SelectedItem != "Ped Actions")
@@ -136,6 +136,10 @@ namespace PedInterview
                             exitVehicle.ForeColor = Color.Gold;
                             civMainMenu.AddItem(followMe = new UIMenuCheckboxItem("Follow me", false, "Makes ped follow the player"));
                             followMe.ForeColor = Color.Gold;
+                            if (EntryPoint.focusedPed != null && EntryPoint.focusedPed.Following)
+                            {
+                                followMe.Checked = true;
+                            }
                             civMainMenu.AddItem(dismiss = new UIMenuItem("Dismiss ped"));
                             dismiss.ForeColor = Color.Gold;
                         }
@@ -214,6 +218,7 @@ namespace PedInterview
             }
         }
 
+        // Consider a separate class to handle question/response stuff
         private static void FindMatchingQuestion(Dictionary<string, Dictionary<XElement, List<XElement>>> questionsAndAnswers, UIMenuListScrollerItem<string> questionCategories, UIMenuItem selectedItem)
         {
             var matchingCategory = questionsAndAnswers.Where(x => x.Key == questionCategories.SelectedItem).FirstOrDefault();
@@ -222,13 +227,22 @@ namespace PedInterview
 
             void GetPedResponse()
             {
-                string gender = GetFocusedPedGender();
-
+                var focusedPed = EntryPoint.focusedPed;
 
                 if (usedQuestionResponsePairs.Contains(questionResponsePair))
                 {
                     RepeatResponse();
                     return;
+                }
+
+                // Get question type, adjust Agitation
+                if(questionResponsePair.Key.Attribute("type").Value == "interview")
+                {
+                    focusedPed.DecreaseAgitation();
+                }
+                else if(questionResponsePair.Key.Attribute("type").Value == "interrogation")
+                {
+                    focusedPed.IncreaseAgitation();
                 }
 
                 usedQuestionResponsePairs.Add(questionResponsePair);
@@ -237,7 +251,7 @@ namespace PedInterview
                 {
                     response = questionResponsePair.Value[GetRandomValue()];
                     usedResponses.Add(response);
-                    Game.LogTrivial($"Response added: {questionResponsePair.Value[GetRandomValue()]}");
+                    Game.LogTrivial($"Response added: {response}");
                 }
                 else if (responseType != null && GetResponseChance() < 3)
                 {
@@ -245,9 +259,7 @@ namespace PedInterview
                     usedResponses.Add(response);
                     Game.LogTrivial($"Response added: {response}");
                 }
-
-                //if(questionResponsePair.Value[randomValue].Attribute("type").Value == "lie")
-                Game.DisplaySubtitle($"~y~Unidentified {gender}: ~w~{response}");
+                Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~{response}");
 
                 var responseAttributes = response.Attributes();
                 foreach(XAttribute attribute in responseAttributes)
@@ -261,11 +273,11 @@ namespace PedInterview
                     Game.LogTrivial($"This response was already used");
                     if (GetRandomValue() % 2 == 0)
                     {
-                        Game.DisplaySubtitle($"~y~Unidentified {gender}: ~w~I already told you, {questionResponsePair.Value.Where(x => x == usedResponses.FirstOrDefault()).FirstOrDefault()}");
+                        Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~I already told you, {questionResponsePair.Value.Where(x => x == usedResponses.FirstOrDefault()).FirstOrDefault().ToString().ToLower()}");
                     }
                     else
                     {
-                        Game.DisplaySubtitle($"~y~Unidentified {gender}: ~w~Did I s-s-stutter?");
+                        Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~Did I s-s-stutter?");
                     }
                 }
 
@@ -280,22 +292,6 @@ namespace PedInterview
                     return r.Next(questionResponsePair.Value.Count);
                 }
             }
-        }
-
-        // Consider making FocusedPed class
-        private static string GetFocusedPedGender()
-        {
-            string gender = "male";
-            if (EntryPoint.focusedPed.IsMale)
-            {
-                gender = "male";
-            }
-            else
-            {
-                gender = "female";
-            }
-
-            return gender;
         }
 
         private static float SetMenuWidth(UIMenu menu)
