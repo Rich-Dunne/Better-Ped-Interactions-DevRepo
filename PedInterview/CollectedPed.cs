@@ -1,4 +1,5 @@
 ﻿using Rage;
+using System;
 using System.Drawing;
 
 namespace PedInterview
@@ -7,8 +8,10 @@ namespace PedInterview
     {
         internal Ped Ped { get; private set; }
         internal Blip Blip { get; private set; }
+        internal string Gender { get; private set; }
         internal bool Following { get; private set; } = false;
         private bool Dismissed { get; set; } = false;
+        internal int Agitation { get; private set; } = new Random().Next(0,101); // Can set Agitation based on ped relationship group to player, has weapons, if ped is pulled over/arrested
 
         internal CollectedPed(Ped p)
         {
@@ -16,6 +19,7 @@ namespace PedInterview
             Ped.BlockPermanentEvents = true;
             Ped.IsPersistent = true;
             CreateBlip();
+            AssignGender();
 
             if (Ped.IsOnFoot)
             {
@@ -25,6 +29,7 @@ namespace PedInterview
             {
                 Ped.Tasks.PerformDrivingManeuver(VehicleManeuver.Wait);
             }
+            Game.LogTrivial($"Starting agitation: {Agitation}");
 
             GameFiber.StartNew(() =>
             {
@@ -66,7 +71,14 @@ namespace PedInterview
         internal void ExitVehicle()
         {
             Ped.Tasks.LeaveVehicle(LeaveVehicleFlags.None).WaitForCompletion();
-            FacePlayer();
+            if(Agitation > 50)
+            {
+                //do something
+            }
+            else
+            {
+                FacePlayer();
+            }
         }
 
         internal void FollowMe()
@@ -84,6 +96,44 @@ namespace PedInterview
         internal void TurnOffEngine()
         {
             Ped.CurrentVehicle.IsEngineOn = false;
+        }
+
+        internal void IncreaseAgitation()
+        {
+            if(Agitation <= 95)
+            {
+                Agitation += 5;
+            }
+            else if (Agitation > 95)
+            {
+                Agitation = 100;
+            }
+            Game.LogTrivial($"Agitation increased: {Agitation}");
+        }
+
+        internal void DecreaseAgitation()
+        {
+            if(Agitation > 2)
+            {
+                Agitation -= 2;
+            }
+            else if(Agitation == 1)
+            {
+                Agitation = 0;
+            }
+            Game.LogTrivial($"Agitation decreased: {Agitation}");
+        }
+
+        private void AssignGender()
+        {
+            if (Ped.IsMale)
+            {
+                Gender = "male";
+            }
+            else
+            {
+                Gender = "female";
+            }
         }
 
         internal void Dismiss()
