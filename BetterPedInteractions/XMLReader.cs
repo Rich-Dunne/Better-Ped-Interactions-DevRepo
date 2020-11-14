@@ -10,7 +10,7 @@ namespace BetterPedInteractions
         internal static Dictionary<string, Dictionary<XElement, List<XElement>>> ReadXML(string filename)
         {
             var questionsAndAnswers = new Dictionary<string,Dictionary<XElement, List<XElement>>>();
-            var currentDirectory = Directory.GetCurrentDirectory() + "\\plugins";
+            var currentDirectory = Directory.GetCurrentDirectory() + "\\plugins\\BetterPedInteractions";
             var xmlFilepath = Path.Combine(currentDirectory, filename);
 
             XElement file = XElement.Load(xmlFilepath);
