@@ -4,6 +4,7 @@ using RAGENativeUI.Elements;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 [assembly: Rage.Attributes.Plugin("Ped Interview", Author = "Rich", Description = "Dialogue menus to interact with peds.", PrefersSingleInstance = true)]
 
@@ -13,7 +14,6 @@ namespace PedInterview
     {
         internal static List<CollectedPed> collectedPeds = new List<CollectedPed>();
         internal static CollectedPed focusedPed = null;
-        //internal static Ped focusedPed = null;
 
         public static void Main()
         {
@@ -23,7 +23,14 @@ namespace PedInterview
             var copQuestionsAndAnswers = XMLReader.ReadXML("CopInterview.xml");
             var civMainMenu = MenuManager.BuildCivMenu(civQuestionsAndAnswers);
             var copMainMenu = MenuManager.BuildCopMenu(copQuestionsAndAnswers);
+            GetAssemblyVersion();
             LoopForUserInput(civMainMenu, copMainMenu);
+
+            void GetAssemblyVersion()
+            {
+                string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                Game.LogTrivial($"V{version} is ready.");
+            }
         }
 
         private static void LoopForUserInput(UIMenu civMainMenu, UIMenu copMainMenu)
@@ -50,7 +57,7 @@ namespace PedInterview
 
                 void CloseMenuIfPlayerTooFar()
                 {
-                    if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following)
+                    if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
                     {
                         menuPool.CloseAllMenus();
                     }
@@ -60,7 +67,7 @@ namespace PedInterview
             void DisplayPedInteractMenu()
             {
                 var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
-                if(nearbyPed && nearbyPed.RelationshipGroup == RelationshipGroup.Cop)
+                if(nearbyPed && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
                 {
                     focusedPed = null;
                     copMainMenu.Visible = !copMainMenu.Visible;
@@ -70,20 +77,23 @@ namespace PedInterview
                     var collectedPed = collectedPeds.Where(cp => cp.Ped == nearbyPed).FirstOrDefault();
                     if (collectedPed == null)
                     {
-                        collectedPed = CollectCivPed(nearbyPed);
+                        Game.LogTrivial($"collectedPed is null, collecting nearbyPed and assigning as focusedPed.");
+                        focusedPed = CollectCivPed(nearbyPed);
                     }
-                    focusedPed = collectedPed;
-
-                    if (collectedPed.Ped.IsOnFoot && !collectedPed.Following)
+                    else
                     {
-                        collectedPed.FacePlayer();
+                        focusedPed = collectedPed;
+                    }
+
+                    if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
+                    {
+                        focusedPed.FacePlayer();
                     }
                     civMainMenu.Visible = !civMainMenu.Visible;
                 }
 
                 CollectedPed CollectCivPed(Ped p)
                 {
-                    // Collect ped
                     var collectedPed = new CollectedPed(p);
                     collectedPeds.Add(collectedPed);
                     Game.LogTrivial($"{p.Model.Name} collected.");
@@ -95,7 +105,18 @@ namespace PedInterview
 
             void DisableMenuItems()
             {
-                if(focusedPed != null && focusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance)
+                if (!Game.LocalPlayer.Character)
+                {
+                    Game.LogTrivial($"Player character is null.");
+                    return;
+                }
+                if(focusedPed == null)
+                {
+                    Game.LogTrivial($"focusedPed is null.");
+                    return;
+                }
+
+                if(focusedPed.Ped && focusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance)
                 {
                     foreach(UIMenuItem item in civMainMenu.MenuItems)
                     {
@@ -105,7 +126,7 @@ namespace PedInterview
                         }
                     }
                 }
-                else if(focusedPed != null && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) <= Settings.InteractDistance)
+                else if(Game.LocalPlayer.Character && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) <= Settings.InteractDistance)
                 {
                     foreach (UIMenuItem item in civMainMenu.MenuItems)
                     {
@@ -113,7 +134,7 @@ namespace PedInterview
                     }
                 }
 
-                if (focusedPed?.Ped && !focusedPed.Ped.CurrentVehicle)
+                if (focusedPed.Ped && !focusedPed.Ped.CurrentVehicle)
                 {
                     MenuManager.rollWindowDown.Enabled = false;
                     MenuManager.turnOffEngine.Enabled = false;
