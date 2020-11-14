@@ -16,7 +16,7 @@ namespace PedInterview
         internal static UIMenuItem questionItem, rollWindowDown, exitVehicle, turnOffEngine, dismiss;
         private static UIMenuCheckboxItem followMe;
         private static UIMenuListScrollerItem<string> civQuestionCategories, copQuestionCategories;
-        private static List<KeyValuePair<XElement,List<XElement>>> usedQuestionResponsePairs = new List<KeyValuePair<XElement, List<XElement>>>();
+        private static Dictionary<XElement, XElement> usedQuestionResponsePairs = new Dictionary<XElement, XElement>();
         private static List<XElement> usedResponses = new List<XElement>();
         private static string responseType = null;
         private static Random r = new Random();
@@ -228,24 +228,35 @@ namespace PedInterview
             void GetPedResponse()
             {
                 var focusedPed = EntryPoint.focusedPed;
-
-                if (usedQuestionResponsePairs.Contains(questionResponsePair))
+                if (usedQuestionResponsePairs.ContainsKey(questionResponsePair.Key))
                 {
-                    RepeatResponse();
+                    if (!focusedPed.StoppedTalking)
+                    {
+                        RepeatResponse();
+                    }
+                    if (Settings.EnableAgitation)
+                    {
+                        focusedPed.IncreaseAgitation(true);
+                    }
                     return;
                 }
 
                 // Get question type, adjust Agitation
-                if(questionResponsePair.Key.Attribute("type").Value == "interview")
+                if (Settings.EnableAgitation)
                 {
-                    focusedPed.DecreaseAgitation();
-                }
-                else if(questionResponsePair.Key.Attribute("type").Value == "interrogation")
-                {
-                    focusedPed.IncreaseAgitation();
+                    if (questionResponsePair.Key.Attributes().Any(x => x.Name == "type"))
+                    {
+                        if (questionResponsePair.Key.Attribute("type").Value == "interview")
+                        {
+                            focusedPed.DecreaseAgitation();
+                        }
+                        else if (questionResponsePair.Key.Attribute("type").Value == "interrogation")
+                        {
+                            focusedPed.IncreaseAgitation();
+                        }
+                    }
                 }
 
-                usedQuestionResponsePairs.Add(questionResponsePair);
                 XElement response = null;
                 if(responseType == null || responseType != null && GetResponseChance() == 3)
                 {
@@ -259,21 +270,30 @@ namespace PedInterview
                     usedResponses.Add(response);
                     Game.LogTrivial($"Response added: {response}");
                 }
-                Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~{response}");
-
-                var responseAttributes = response.Attributes();
-                foreach(XAttribute attribute in responseAttributes)
+                usedQuestionResponsePairs.Add(questionResponsePair.Key, response);
+                if (!focusedPed.StoppedTalking)
                 {
-                    Game.LogTrivial($"Response attribute: {attribute.Value}");
-                    responseType = attribute.Value;
+                    Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~{response}");
+                }
+
+                if (response.HasAttributes)
+                {
+                    var responseAttributes = response.Attributes();
+                    foreach (XAttribute attribute in responseAttributes)
+                    {
+                        Game.LogTrivial($"Response attribute: {attribute.Value}");
+                        responseType = attribute.Value;
+                    }
                 }
 
                 void RepeatResponse()
                 {
+                    var repeatedResponse = usedQuestionResponsePairs[questionResponsePair.Key].Value.ToLower();
                     Game.LogTrivial($"This response was already used");
-                    if (GetRandomValue() % 2 == 0)
+
+                    if (MathHelper.GetChance(2))
                     {
-                        Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~I already told you, {questionResponsePair.Value.Where(x => x == usedResponses.FirstOrDefault()).FirstOrDefault().ToString().ToLower()}");
+                        Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~I already told you, {repeatedResponse}");
                     }
                     else
                     {
