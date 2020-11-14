@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-[assembly: Rage.Attributes.Plugin("Ped Interview", Author = "Rich", Description = "Dialogue menus to interact with peds.", PrefersSingleInstance = true)]
+[assembly: Rage.Attributes.Plugin("Better Ped Interactions", Author = "Rich", Description = "Custom dialogue menus for better ped interactions, among other features to enhance interaction experiences.", PrefersSingleInstance = true)]
 
-namespace PedInterview
+namespace BetterPedInteractions
 {
     internal class EntryPoint
     {

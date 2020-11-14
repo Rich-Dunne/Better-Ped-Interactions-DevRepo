@@ -2,7 +2,7 @@
 using System.Windows.Forms;
 
 
-namespace PedInterview
+namespace BetterPedInteractions
 {
     internal static class Settings
     {

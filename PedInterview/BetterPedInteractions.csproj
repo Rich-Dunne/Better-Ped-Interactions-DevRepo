@@ -7,8 +7,8 @@
     <ProjectGuid>{5B8F4187-72DC-4A7B-8519-5159DDF7F900}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PedInterview</RootNamespace>
-    <AssemblyName>PedInterview</AssemblyName>
+    <RootNamespace>BetterPedInteractions</RootNamespace>
+    <AssemblyName>BetterPedInteractions</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>

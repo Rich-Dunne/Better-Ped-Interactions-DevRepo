@@ -7,7 +7,7 @@ using System.Linq;
 using System.Xml.Linq;
 using System.Drawing;
 
-namespace PedInterview
+namespace BetterPedInteractions
 {
     class MenuManager
     {
