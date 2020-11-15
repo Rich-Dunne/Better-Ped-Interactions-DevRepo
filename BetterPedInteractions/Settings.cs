@@ -6,6 +6,12 @@ namespace BetterPedInteractions
 {
     internal static class Settings
     {
+        internal enum Group
+        {
+            Civilian = 0,
+            Cop = 1
+        }
+
         internal static Keys ToggleKey = Keys.E;
         internal static Keys ModifierKey = Keys.LShiftKey;
         internal static ControllerButtons ToggleButton = ControllerButtons.Y;
