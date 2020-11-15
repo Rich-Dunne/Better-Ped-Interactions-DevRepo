@@ -14,13 +14,16 @@ namespace BetterPedInteractions
             var copQuestionsAndAnswers = new Dictionary<XAttribute, Dictionary<XElement, List<XElement>>>();
             var defaultDirectory = Directory.GetCurrentDirectory() + "\\plugins\\BetterPedInteractions\\Default";
             var customDirectory = Directory.GetCurrentDirectory() + "\\plugins\\BetterPedInteractions\\Custom";
+            
             LoadXMLs(defaultDirectory);
             LoadXMLs(customDirectory);
 
             Game.LogTrivial($"Building civ menu");
-            MenuManager.BuildCivMenu(civQuestionsAndAnswers);
+            MenuManager.BuildMenu(Settings.Group.Civilian, civQuestionsAndAnswers);
+            //MenuManager.BuildCivMenu(civQuestionsAndAnswers);
             Game.LogTrivial($"Building cop menu");
-            MenuManager.BuildCopMenu(copQuestionsAndAnswers);
+            MenuManager.BuildMenu(Settings.Group.Cop, copQuestionsAndAnswers);
+            //MenuManager.BuildCopMenu(copQuestionsAndAnswers);
 
             void LoadXMLs(string directory)
             {
