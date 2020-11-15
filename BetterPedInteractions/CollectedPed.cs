@@ -180,12 +180,12 @@ namespace BetterPedInteractions
                 }
                 else if (StoppedTalking)
                 {
-                    Game.DisplayNotification($"~o~[Am I Being Detained?]\n~w~The ped is refusing to speak to you");
+                    Game.DisplayNotification($"~o~[Better Ped Interactions]\n~w~The ped is refusing to speak to you");
                 }
             }
             if (Agitation >= Settings.NervousThreshold && !PlayingNervousAnimation && !FleeingOrAttacking)
             {
-                Game.DisplayNotification($"~o~[Am I Being Detained?]\n~w~The ped appears uncomfortable");
+                Game.DisplayNotification($"~o~[Better Ped Interactions]\n~w~The ped appears uncomfortable");
                 PlayNervousAnimation();
             }
 
@@ -283,6 +283,10 @@ namespace BetterPedInteractions
                         }
                         if(Ped.Tasks.CurrentTaskStatus != TaskStatus.InProgress || Ped.Tasks.CurrentTaskStatus != TaskStatus.Preparing)
                         {
+                            if (Dismissed)
+                            {
+                                return;
+                            }
                             functions[MathHelper.GetRandomInteger(4)]();
                         }
                         GameFiber.Sleep(10000);
@@ -312,7 +316,7 @@ namespace BetterPedInteractions
                     symbol = "";
                     color = "~y~";
                 }
-                Game.DisplayNotification($"~o~[Am I Being Detained?]\n~w~Ped agitation: {color}{Agitation} ({symbol}{difference})");
+                Game.DisplayNotification($"~o~[Better Ped Interactions]\n~w~Ped agitation: {color}{Agitation} ({symbol}{difference})");
             }
         }
 

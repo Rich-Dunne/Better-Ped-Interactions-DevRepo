@@ -17,8 +17,8 @@ namespace BetterPedInteractions
 
         internal static void LoadSettings()
         {
-            Game.LogTrivial("Loading PedInterview.ini settings");
-            InitializationFile ini = new InitializationFile("Plugins/PedInterview.ini");
+            Game.LogTrivial("Loading BetterPedInteractions.ini settings");
+            InitializationFile ini = new InitializationFile("Plugins/BetterPedInteractions.ini");
             ini.Create();
             ToggleKey = ini.ReadEnum("Keybindings", "ToggleKey", Keys.E);
             ModifierKey = ini.ReadEnum("Keybindings", "ModifierKey", Keys.LShiftKey);
