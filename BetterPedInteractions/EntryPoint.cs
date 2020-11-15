@@ -20,10 +20,6 @@ namespace BetterPedInteractions
             AppDomain.CurrentDomain.DomainUnload += MyTerminationHandler;
             Settings.LoadSettings();
             XMLReader.ReadXMLs();
-            //var civQuestionsAndAnswers = XMLReader.ReadXML("PedInterview.xml");
-            //var copQuestionsAndAnswers = XMLReader.ReadXML("CopInterview.xml");
-            //var civMainMenu = MenuManager.BuildCivMenu(civQuestionsAndAnswers);
-            //var copMainMenu = MenuManager.BuildCopMenu(copQuestionsAndAnswers);
             GetAssemblyVersion();
             LoopForUserInput();
 
