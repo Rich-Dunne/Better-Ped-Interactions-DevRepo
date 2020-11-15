@@ -12,7 +12,7 @@ namespace BetterPedInteractions
     class MenuManager
     {
         public static MenuPool menuPool = new MenuPool();
-        private static UIMenu civMainMenu, copMainMenu;
+        private static UIMenu civMenu, copMenu;
         internal static UIMenuItem questionItem, rollWindowDown, exitVehicle, turnOffEngine, dismiss;
         private static UIMenuCheckboxItem followMe;
         private static UIMenuListScrollerItem<string> civQuestionCategories, copQuestionCategories;
@@ -21,25 +21,27 @@ namespace BetterPedInteractions
         private static string responseType = null;
         private static Random r = new Random();
 
-        internal static UIMenu BuildCivMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> civQuestionsAndAnswers)
+        internal static void BuildCivMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> civQuestionsAndAnswers)
         {
-            civMainMenu = new UIMenu("Civilian Ped Interview", "");
-            menuPool.Add(civMainMenu);
+            if(civMenu == null)
+            {
+                civMenu = new UIMenu("Civilian Interaction Menu", "");
+                menuPool.Add(civMenu);
 
-            civMainMenu.AddItem(civQuestionCategories = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civQuestionsAndAnswers.Keys));
+                civMenu.AddItem(civQuestionCategories = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civQuestionsAndAnswers.Keys));
+            }
+
             populateCivMenu();
-            civMainMenu.RefreshIndex();
+            civMenu.RefreshIndex();
 
-            civMainMenu.Width = SetMenuWidth(civMainMenu);
+            civMenu.Width = SetMenuWidth(civMenu);
 
-            civMainMenu.MouseControlsEnabled = false;
-            civMainMenu.AllowCameraMovement = true;
+            civMenu.MouseControlsEnabled = false;
+            civMenu.AllowCameraMovement = true;
 
-            civMainMenu.OnItemSelect += CivInteract_OnItemSelected;
-            civMainMenu.OnCheckboxChange += CivInteract_OnCheckboxChanged;
-            civMainMenu.OnScrollerChange += CivInteract_OnScrollerChanged;
-
-            return civMainMenu;
+            civMenu.OnItemSelect += CivInteract_OnItemSelected;
+            civMenu.OnCheckboxChange += CivInteract_OnCheckboxChanged;
+            civMenu.OnScrollerChange += CivInteract_OnScrollerChanged;
 
             void CivInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
             {
@@ -85,7 +87,7 @@ namespace BetterPedInteractions
                 if (selectedItem == dismiss)
                 {
                     focusedPed.Dismiss();
-                    civMainMenu.Close();
+                    civMenu.Close();
                 }
 
                 if(selectedItem == rollWindowDown && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
@@ -111,13 +113,13 @@ namespace BetterPedInteractions
 
             void CivInteract_OnScrollerChanged(UIMenu sender, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
             {
-                while (civMainMenu.MenuItems.Count > 1)
+                while (civMenu.MenuItems.Count > 1)
                 {
-                    civMainMenu.RemoveItemAt(1);
+                    civMenu.RemoveItemAt(1);
                 }
 
                 populateCivMenu();
-                civMainMenu.Width = SetMenuWidth(civMainMenu);
+                civMenu.Width = SetMenuWidth(civMenu);
             }
 
             void populateCivMenu()
@@ -126,26 +128,26 @@ namespace BetterPedInteractions
                 {
                     if (questionCategory.Key == civQuestionCategories.SelectedItem)
                     {
-                        if(civQuestionCategories.SelectedItem == "Ped Actions")
+                        if (civQuestionCategories.SelectedItem == "Ped Actions")
                         {
-                            civMainMenu.AddItem(rollWindowDown = new UIMenuItem("Roll down window", "Rolls down the ped's window"));
+                            civMenu.AddItem(rollWindowDown = new UIMenuItem("Roll down window", "Rolls down the ped's window"));
                             rollWindowDown.ForeColor = Color.Gold;
-                            civMainMenu.AddItem(turnOffEngine = new UIMenuItem("Turn engine off", "Makes ped turn off the engine"));
+                            civMenu.AddItem(turnOffEngine = new UIMenuItem("Turn engine off", "Makes ped turn off the engine"));
                             turnOffEngine.ForeColor = Color.Gold;
-                            civMainMenu.AddItem(exitVehicle = new UIMenuItem("Exit vehicle", "Makes ped exit the vehicle"));
+                            civMenu.AddItem(exitVehicle = new UIMenuItem("Exit vehicle", "Makes ped exit the vehicle"));
                             exitVehicle.ForeColor = Color.Gold;
-                            civMainMenu.AddItem(followMe = new UIMenuCheckboxItem("Follow me", false, "Makes ped follow the player"));
+                            civMenu.AddItem(followMe = new UIMenuCheckboxItem("Follow me", false, "Makes ped follow the player"));
                             followMe.ForeColor = Color.Gold;
                             if (EntryPoint.focusedPed != null && EntryPoint.focusedPed.Following)
                             {
                                 followMe.Checked = true;
                             }
-                            civMainMenu.AddItem(dismiss = new UIMenuItem("Dismiss ped"));
+                            civMenu.AddItem(dismiss = new UIMenuItem("Dismiss ped"));
                             dismiss.ForeColor = Color.Gold;
                         }
                         foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
                         {
-                            civMainMenu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Key.Attribute("question").Value));
+                            civMenu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Key.Attribute("question").Value));
                             var attribute = questionResponsePair.Key.Attributes().Where(x => x.Name == "type").FirstOrDefault();
                             if (attribute != null)
                             {
@@ -168,24 +170,26 @@ namespace BetterPedInteractions
             }
         }
 
-        internal static UIMenu BuildCopMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> copQuestionsAndAnswers)
+        internal static void BuildCopMenu(Dictionary<string, Dictionary<XElement, List<XElement>>> copQuestionsAndAnswers)
         {
-            copMainMenu = new UIMenu("Cop Ped Interview", "");
-            menuPool.Add(copMainMenu);
+            if(copMenu == null)
+            {
+                copMenu = new UIMenu("Cop Interaction Menu", "");
+                menuPool.Add(copMenu);
 
-            copMainMenu.AddItem(copQuestionCategories = new UIMenuListScrollerItem<string>("Category", "The category of the questions", copQuestionsAndAnswers.Keys));
+                copMenu.AddItem(copQuestionCategories = new UIMenuListScrollerItem<string>("Category", "The category of the questions", copQuestionsAndAnswers.Keys));
+            }
+
             populateCopMenu();
-            copMainMenu.RefreshIndex();
+            copMenu.RefreshIndex();
 
-            copMainMenu.Width = SetMenuWidth(copMainMenu);
+            copMenu.Width = SetMenuWidth(copMenu);
 
-            copMainMenu.MouseControlsEnabled = false;
-            copMainMenu.AllowCameraMovement = true;
+            copMenu.MouseControlsEnabled = false;
+            copMenu.AllowCameraMovement = true;
 
-            copMainMenu.OnItemSelect += CopInteract_OnItemSelected;
-            copMainMenu.OnScrollerChange += CopInteract_OnScrollerChanged;
-
-            return copMainMenu;
+            copMenu.OnItemSelect += CopInteract_OnItemSelected;
+            copMenu.OnScrollerChange += CopInteract_OnScrollerChanged;
 
             void CopInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
             {
@@ -194,13 +198,13 @@ namespace BetterPedInteractions
 
             void CopInteract_OnScrollerChanged(UIMenu sender, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
             {
-                while (copMainMenu.MenuItems.Count > 1)
+                while (copMenu.MenuItems.Count > 1)
                 {
-                    copMainMenu.RemoveItemAt(1);
+                    copMenu.RemoveItemAt(1);
                 }
 
                 populateCopMenu();
-                copMainMenu.Width = SetMenuWidth(copMainMenu);
+                copMenu.Width = SetMenuWidth(copMenu);
             }
 
             void populateCopMenu()
@@ -211,7 +215,7 @@ namespace BetterPedInteractions
                     {
                         foreach (KeyValuePair<XElement, List<XElement>> question in category.Value)
                         {
-                            copMainMenu.AddItem(questionItem = new UIMenuItem(question.Key.Attribute("question").Value));
+                            copMenu.AddItem(questionItem = new UIMenuItem(question.Key.Attribute("question").Value));
                         }
                     }
                 }
@@ -317,24 +321,46 @@ namespace BetterPedInteractions
         private static float SetMenuWidth(UIMenu menu)
         {
             float width = 0.25f;
-            foreach (var button in menu.MenuItems)
+
+            civQuestionCategories.TextStyle.Apply();
+            Rage.Native.NativeFunction.Natives.x54CE8AC98E120CAB("STRING"); // _BEGIN_TEXT_COMMAND_GET_WIDTH
+            if(menu.TitleText == "Civilian Interaction Menu")
             {
-                button.TextStyle.Apply();
+                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(civQuestionCategories.SelectedItem);
+            }
+            else if (menu.TitleText == "Cop Interaction Menu")
+            {
+                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(copQuestionCategories.SelectedItem);
+            }
+            float scrollerTextWidth = Rage.Native.NativeFunction.Natives.x85F061DA64ED2F67<float>(true); // _END_TEXT_COMMAND_GET_WIDTH
+            float padding = 0.00390625f * 2; // typical padding used in RNUI
+
+            var scrollerItemWidth = scrollerTextWidth + padding;
+            //Game.LogTrivial($"Scroller item width: {scrollerItemWidth}");
+
+            foreach (var menuItem in menu.MenuItems)
+            {
+                menuItem.TextStyle.Apply();
                 Rage.Native.NativeFunction.Natives.x54CE8AC98E120CAB("STRING"); // _BEGIN_TEXT_COMMAND_GET_WIDTH
-                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(button.Text);
+                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(menuItem.Text);
                 float textWidth = Rage.Native.NativeFunction.Natives.x85F061DA64ED2F67<float>(true); // _END_TEXT_COMMAND_GET_WIDTH
-                float padding = 0.00390625f * 2; // typical padding used in RNUI
+                //float padding = 0.00390625f * 2; // typical padding used in RNUI
 
                 var newWidth = Math.Max(textWidth + padding, UIMenu.DefaultWidth);
-
+                //Game.LogTrivial($"Menu item width: {newWidth}");
+                
                 // Minimum width is set to prevent the scroller from clipping the menu item name
                 if (newWidth < 0.25)
                 {
                     newWidth = 0.25f;
                 }
-                if(newWidth > width)
+                if (newWidth > width)
                 {
                     width = newWidth;
+                }
+                if(scrollerItemWidth > 0.15)
+                {
+                    width = scrollerItemWidth + 0.08f;
                 }
             }
             return width;

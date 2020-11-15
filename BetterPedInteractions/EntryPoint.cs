@@ -19,12 +19,13 @@ namespace BetterPedInteractions
         {
             AppDomain.CurrentDomain.DomainUnload += MyTerminationHandler;
             Settings.LoadSettings();
-            var civQuestionsAndAnswers = XMLReader.ReadXML("PedInterview.xml");
-            var copQuestionsAndAnswers = XMLReader.ReadXML("CopInterview.xml");
-            var civMainMenu = MenuManager.BuildCivMenu(civQuestionsAndAnswers);
-            var copMainMenu = MenuManager.BuildCopMenu(copQuestionsAndAnswers);
+            XMLReader.ReadXMLs();
+            //var civQuestionsAndAnswers = XMLReader.ReadXML("PedInterview.xml");
+            //var copQuestionsAndAnswers = XMLReader.ReadXML("CopInterview.xml");
+            //var civMainMenu = MenuManager.BuildCivMenu(civQuestionsAndAnswers);
+            //var copMainMenu = MenuManager.BuildCopMenu(copQuestionsAndAnswers);
             GetAssemblyVersion();
-            LoopForUserInput(civMainMenu, copMainMenu);
+            LoopForUserInput();
 
             void GetAssemblyVersion()
             {
@@ -33,9 +34,12 @@ namespace BetterPedInteractions
             }
         }
 
-        private static void LoopForUserInput(UIMenu civMainMenu, UIMenu copMainMenu)
+        private static void LoopForUserInput()
         {
             var menuPool = MenuManager.menuPool;
+            var copMenu = menuPool.Where(m => m.TitleText == "Cop Interaction Menu").FirstOrDefault();
+            var civMenu = menuPool.Where(m => m.TitleText == "Civilian Interaction Menu").FirstOrDefault();
+
             while (true)
             {
                 if (Game.LocalPlayer.Character.IsOnFoot)
@@ -67,10 +71,11 @@ namespace BetterPedInteractions
             void DisplayPedInteractMenu()
             {
                 var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
+                
                 if(nearbyPed && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
                 {
                     focusedPed = null;
-                    copMainMenu.Visible = !copMainMenu.Visible;
+                    copMenu.Visible = !copMenu.Visible;
                 }
                 else if(nearbyPed)
                 {
@@ -89,7 +94,7 @@ namespace BetterPedInteractions
                     {
                         focusedPed.FacePlayer();
                     }
-                    civMainMenu.Visible = !civMainMenu.Visible;
+                    civMenu.Visible = !civMenu.Visible;
                 }
 
                 CollectedPed CollectCivPed(Ped p)
@@ -107,18 +112,18 @@ namespace BetterPedInteractions
             {
                 if (!Game.LocalPlayer.Character)
                 {
-                    Game.LogTrivial($"Player character is null.");
+                    //Game.LogTrivial($"Player character is null.");
                     return;
                 }
                 if(focusedPed == null)
                 {
-                    Game.LogTrivial($"focusedPed is null.");
+                    //Game.LogTrivial($"focusedPed is null.");
                     return;
                 }
 
                 if(focusedPed.Ped && focusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance)
                 {
-                    foreach(UIMenuItem item in civMainMenu.MenuItems)
+                    foreach(UIMenuItem item in civMenu.MenuItems)
                     {
                         if(item.Text != "Follow me")
                         {
@@ -128,7 +133,7 @@ namespace BetterPedInteractions
                 }
                 else if(Game.LocalPlayer.Character && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) <= Settings.InteractDistance)
                 {
-                    foreach (UIMenuItem item in civMainMenu.MenuItems)
+                    foreach (UIMenuItem item in civMenu.MenuItems)
                     {
                         item.Enabled = true;
                     }
@@ -144,7 +149,7 @@ namespace BetterPedInteractions
                 {
                     MenuManager.rollWindowDown.Enabled = true;
                     MenuManager.exitVehicle.Enabled = true;
-                    if(focusedPed?.Ped && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
+                    if (focusedPed?.Ped && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
                     {
                         MenuManager.turnOffEngine.Enabled = true;
                     }
