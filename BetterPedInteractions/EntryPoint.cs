@@ -1,5 +1,4 @@
 ﻿using Rage;
-using RAGENativeUI;
 using RAGENativeUI.Elements;
 using System;
 using System.Collections.Generic;
@@ -33,11 +32,14 @@ namespace BetterPedInteractions
         private static void LoopForUserInput()
         {
             var menuPool = MenuManager.menuPool;
-            var copMenu = menuPool.Where(m => m.TitleText == "Cop Interaction Menu").FirstOrDefault();
-            var civMenu = menuPool.Where(m => m.TitleText == "Civilian Interaction Menu").FirstOrDefault();
+            var copMenu = menuPool.FirstOrDefault(m => m.TitleText == "Cop Interaction Menu");
+            var civMenu = menuPool.FirstOrDefault(m => m.TitleText == "Civilian Interaction Menu");
 
             while (true)
             {
+                CloseMenuIfPlayerTooFar();
+                DisableMenuItems();
+
                 if (Game.LocalPlayer.Character.IsOnFoot)
                 {
                     // Keyboard
@@ -46,13 +48,25 @@ namespace BetterPedInteractions
                         (Settings.ModifierButton == ControllerButtons.None && Game.IsControllerButtonDown(Settings.ToggleButton)) || 
                         (Game.IsControllerButtonDownRightNow(Settings.ModifierButton) && Game.IsControllerButtonDown(Settings.ToggleButton)))
                     {
-                        DisplayPedInteractMenu();
+                        var nearbyPed = GetNearbyPed();
+                        if (nearbyPed)
+                        {
+                            var collectedPed = collectedPeds.FirstOrDefault(cp => cp.Ped == nearbyPed);
+                            CollectOrFocusNearbyPed(nearbyPed, collectedPed);
+                            MakeCollectedPedFacePlayer();
+                            if (focusedPed.Group == Settings.Group.Civilian)
+                            {
+                                civMenu.Visible = !civMenu.Visible;
+                            }
+                            else if (focusedPed.Group == Settings.Group.Cop)
+                            {
+                                copMenu.Visible = !copMenu.Visible;
+                            }
+                        }
                     }
                 }
                 MenuManager.menuPool.ProcessMenus();
 
-                CloseMenuIfPlayerTooFar();
-                DisableMenuItems();
                 GameFiber.Yield();
 
                 void CloseMenuIfPlayerTooFar()
@@ -64,43 +78,53 @@ namespace BetterPedInteractions
                 }
             }
 
-            void DisplayPedInteractMenu()
+            Ped GetNearbyPed()
             {
                 var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
-                
-                if(nearbyPed && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
+                if (!nearbyPed)
                 {
-                    focusedPed = null;
-                    copMenu.Visible = !copMenu.Visible;
+                    Game.LogTrivial($"nearbyPed is null.");
+                    return null;
                 }
-                else if(nearbyPed)
+                else
                 {
-                    var collectedPed = collectedPeds.Where(cp => cp.Ped == nearbyPed).FirstOrDefault();
-                    if (collectedPed == null)
-                    {
-                        Game.LogTrivial($"collectedPed is null, collecting nearbyPed and assigning as focusedPed.");
-                        focusedPed = CollectCivPed(nearbyPed);
-                    }
-                    else
-                    {
-                        focusedPed = collectedPed;
-                    }
-
-                    if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
-                    {
-                        focusedPed.FacePlayer();
-                    }
-                    civMenu.Visible = !civMenu.Visible;
+                    return nearbyPed;
                 }
+            }
 
-                CollectedPed CollectCivPed(Ped p)
+            void CollectOrFocusNearbyPed(Ped nearbyPed, CollectedPed collectedPed)
+            {
+                if (collectedPed == null && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.RelationshipGroup == "UBCOP" || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
                 {
-                    var collectedPed = new CollectedPed(p);
-                    collectedPeds.Add(collectedPed);
-                    Game.LogTrivial($"{p.Model.Name} collected.");
-
+                    Game.LogTrivial($"collectedPed is null, collecting nearby COP and assigning as focusedPed.");
+                    focusedPed = CollectPed(nearbyPed, Settings.Group.Cop);
+                }
+                else if (collectedPed == null)
+                {
+                    Game.LogTrivial($"collectedPed is null, collecting nearby CIV and assigning as focusedPed.");
+                    focusedPed = CollectPed(nearbyPed, Settings.Group.Civilian);
+                }
+                else
+                {
                     focusedPed = collectedPed;
-                    return collectedPed;
+                }
+            }
+
+            CollectedPed CollectPed(Ped p, Settings.Group group)
+            {
+                var newCollectedPed = new CollectedPed(p, group);
+                collectedPeds.Add(newCollectedPed);
+                Game.LogTrivial($"{p.Model.Name} collected.");
+
+                focusedPed = newCollectedPed;
+                return newCollectedPed;
+            }
+
+            void MakeCollectedPedFacePlayer()
+            {
+                if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
+                {
+                    focusedPed.FacePlayer();
                 }
             }
 
