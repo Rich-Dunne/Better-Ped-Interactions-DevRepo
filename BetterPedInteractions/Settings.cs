@@ -12,6 +12,13 @@ namespace BetterPedInteractions
             Cop = 1
         }
 
+        internal enum ResponseType
+        {
+            Unspecified = 0,
+            Interview = 1,
+            Interrogation = 2
+        }
+
         internal static Keys ToggleKey = Keys.E;
         internal static Keys ModifierKey = Keys.LShiftKey;
         internal static ControllerButtons ToggleButton = ControllerButtons.Y;
