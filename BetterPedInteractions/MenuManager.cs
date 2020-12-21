@@ -11,21 +11,17 @@ namespace BetterPedInteractions
 {
     class MenuManager
     {
-        public static MenuPool menuPool = new MenuPool();
+        internal static MenuPool menuPool = new MenuPool();
         private static UIMenu _civMenu, _copMenu;
-        internal static UIMenuItem questionItem, rollWindowDown, exitVehicle, turnOffEngine, dismiss;
-        private static UIMenuCheckboxItem _followMe;
+        internal static UIMenuItem questionItem, rollWindowDown, exitVehicle, turnOffEngine;
+        private static UIMenuItem _dismiss = new UIMenuItem("Dismiss ped", "Dismisses the focused ped.");
+        private static UIMenuCheckboxItem _followMe = new UIMenuCheckboxItem("Follow me", false, "Makes the ped follow the player");
         private static UIMenuListScrollerItem<string> _civQuestionCategoryScroller, _copQuestionCategoryScroller, _subMenuScroller;
         private static Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> _civQuestionsAndAnswers, _copQuestionsAndAnswers;
-        private static Dictionary<XElement, XElement> _usedQuestionResponsePairs = new Dictionary<XElement, XElement>();
-        private static List<XElement> _usedResponses = new List<XElement>();
-
-        private static Random _randomNumber = new Random();
         private static int _savedSubMenuIndex = 0;
 
         internal static void BuildMenu(Settings.Group group, Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> questionsAndAnswers)
         {
-            //if (_civMenu == null)
             if (group == Settings.Group.Civilian)
             {
                 _civQuestionsAndAnswers = new Dictionary<XAttribute, Dictionary<XElement, List<XElement>>>();
@@ -49,81 +45,66 @@ namespace BetterPedInteractions
                 _civMenu.MouseControlsEnabled = false;
                 _civMenu.AllowCameraMovement = true;
 
-                _civMenu.OnItemSelect += CivInteract_OnItemSelected;
                 _civMenu.OnCheckboxChange += CivInteract_OnCheckboxChanged;
+                _civMenu.OnItemSelect += CivInteract_OnItemSelected;
                 _civMenu.OnScrollerChange += Menu_OnScrollerChanged;
 
                 void CivInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
                 {
-                    Ped p = null;
-                    if (EntryPoint.focusedPed.Ped && EntryPoint.focusedPed.Ped.IsAlive)
-                    {
-                        p = EntryPoint.focusedPed.Ped;
-                    }
-                    else
-                    {
-                        Game.LogTrivial($"The focused ped is invalid or dead.");
-                        return;
-                    }
-                    var collectedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
+                    var focusedPed = EntryPoint.focusedPed;
 
                     if (checkboxItem == _followMe)
                     {
                         if (_followMe.Checked)
                         {
-                            collectedPed.FollowMe();
+                            focusedPed.FollowMe();
                         }
                         else
                         {
-                            collectedPed.StopFollowing();
+                            focusedPed.StopFollowing();
                         }
                     }
                 }
 
                 void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
                 {
-                    Ped p = null;
-                    if (EntryPoint.focusedPed.Ped && EntryPoint.focusedPed.Ped.IsAlive)
-                    {
-                        p = EntryPoint.focusedPed.Ped;
-                    }
-                    else
-                    {
-                        Game.LogTrivial($"The focused ped is invalid or dead.");
-                        return;
-                    }
-                    var focusedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
+                    var focusedPed = EntryPoint.focusedPed;
 
-                    if (selectedItem == dismiss)
+                    if (selectedItem == _dismiss)
                     {
                         focusedPed.Dismiss();
-                        _civMenu.Close();
+                        sender.Close();
+                        Game.LogTrivial($"Dismiss");
+                        return;
                     }
 
                     if (selectedItem == rollWindowDown && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
                     {
                         focusedPed.RollDownWindow();
+                        return;
                     }
 
                     if (selectedItem == exitVehicle && focusedPed.Ped.CurrentVehicle)
                     {
                         focusedPed.ExitVehicle();
+                        return;
                     }
 
-                    if (selectedItem == turnOffEngine && p.CurrentVehicle && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
+                    if (selectedItem == turnOffEngine && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
                     {
                         focusedPed.TurnOffEngine();
+                        return;
                     }
 
-                    if (_civQuestionCategoryScroller.SelectedItem != "Ped Actions")
+                    if (selectedItem.GetType() != typeof(UIMenuListScrollerItem<string>) && selectedItem.GetType() != typeof(UIMenuCheckboxItem))
                     {
-                        FindMatchingQuestion(_civQuestionsAndAnswers, _civQuestionCategoryScroller, selectedItem);
+                        ResponseManager.FindMatchingQuestion(_civQuestionsAndAnswers, _civQuestionCategoryScroller, selectedItem);
+                        return;
                     }
                 }
             }
 
             if(group == Settings.Group.Cop)
-            //else if(_copMenu == null)
             {
                 _copQuestionsAndAnswers = new Dictionary<XAttribute, Dictionary<XElement, List<XElement>>>();
                 foreach (var QAPair in questionsAndAnswers)
@@ -146,187 +127,46 @@ namespace BetterPedInteractions
                 _copMenu.MouseControlsEnabled = false;
                 _copMenu.AllowCameraMovement = true;
 
+                _copMenu.OnCheckboxChange += CopInteract_OnCheckboxChanged;
                 _copMenu.OnItemSelect += CopInteract_OnItemSelected;
                 _copMenu.OnScrollerChange += Menu_OnScrollerChanged;
 
+                void CopInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
+                {
+                    var focusedPed = EntryPoint.focusedPed;
+
+                    if (checkboxItem == _followMe)
+                    {
+                        if (_followMe.Checked)
+                        {
+                            focusedPed.FollowMe();
+                        }
+                        else
+                        {
+                            focusedPed.StopFollowing();
+                        }
+                    }
+                }
+
                 void CopInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
                 {
-                    FindMatchingQuestion(_copQuestionsAndAnswers, _copQuestionCategoryScroller, selectedItem);
+                    var focusedPed = EntryPoint.focusedPed;
+
+                    if (selectedItem == _dismiss)
+                    {
+                        focusedPed.Dismiss();
+                        sender.Close();
+                        return;
+                    }
+
+                    if (selectedItem.GetType() != typeof(UIMenuListScrollerItem<string>) && selectedItem.GetType() != typeof(UIMenuCheckboxItem))
+                    {
+                        ResponseManager.FindMatchingQuestion(_copQuestionsAndAnswers, _copQuestionCategoryScroller, selectedItem);
+                        return;
+                    }
                 }
             }
         }
-
-        //internal static void BuildCivMenu(Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> civQuestionsAndAnswers)
-        //{
-        //    if(_civMenu == null)
-        //    {
-        //        _civMenu = new UIMenu("Civilian Interaction Menu", "");
-        //        menuPool.Add(_civMenu);
-        //        var categoryStrings = new List<string>();
-        //        foreach (KeyValuePair <XAttribute, Dictionary<XElement, List<XElement>>> kvp in civQuestionsAndAnswers)
-        //        {
-        //            categoryStrings.Add(kvp.Key.Value);
-        //        }
-        //        _civMenu.AddItem(_civQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", categoryStrings));
-        //    }
-
-        //    PopulateMenu(_civMenu, civQuestionsAndAnswers, _civQuestionCategoryScroller);    
-        //    SetMenuWidth(_civMenu);
-        //    _civMenu.RefreshIndex();
-
-        //    _civMenu.MouseControlsEnabled = false;
-        //    _civMenu.AllowCameraMovement = true;
-
-        //    _civMenu.OnItemSelect += CivInteract_OnItemSelected;
-        //    _civMenu.OnCheckboxChange += CivInteract_OnCheckboxChanged;
-        //    _civMenu.OnScrollerChange += Menu_OnScrollerChanged;
-        //    _civMenu.OnScrollerChange += CivInteract_OnScrollerChanged;
-
-        //    void CivInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
-        //    {
-        //        Ped p = null;
-        //        if (EntryPoint.focusedPed.Ped && EntryPoint.focusedPed.Ped.IsAlive)
-        //        {
-        //            p = EntryPoint.focusedPed.Ped;
-        //        }
-        //        else
-        //        {
-        //            Game.LogTrivial($"The focused ped is invalid or dead.");
-        //            return;
-        //        }
-        //        var collectedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
-
-        //        if (checkboxItem == _followMe)
-        //        {
-        //            if (_followMe.Checked)
-        //            {
-        //                collectedPed.FollowMe();
-        //            }
-        //            else
-        //            {
-        //                collectedPed.StopFollowing();
-        //            }
-        //        }
-        //    }
-
-        //    void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
-        //    {
-        //        Ped p = null;
-        //        if (EntryPoint.focusedPed.Ped && EntryPoint.focusedPed.Ped.IsAlive)
-        //        {
-        //            p = EntryPoint.focusedPed.Ped;
-        //        }
-        //        else
-        //        {
-        //            Game.LogTrivial($"The focused ped is invalid or dead.");
-        //            return;
-        //        }
-        //        var focusedPed = EntryPoint.collectedPeds.Where(cp => cp.Ped == p).FirstOrDefault();
-
-        //        if (selectedItem == dismiss)
-        //        {
-        //            focusedPed.Dismiss();
-        //            _civMenu.Close();
-        //        }
-
-        //        if(selectedItem == rollWindowDown && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
-        //        {
-        //            focusedPed.RollDownWindow();
-        //        }
-
-        //        if(selectedItem == exitVehicle && focusedPed.Ped.CurrentVehicle)
-        //        {
-        //            focusedPed.ExitVehicle();
-        //        }
-
-        //        if(selectedItem == turnOffEngine && p.CurrentVehicle && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
-        //        {
-        //            focusedPed.TurnOffEngine();
-        //        }
-
-        //        if(_civQuestionCategoryScroller.SelectedItem != "Ped Actions")
-        //        {
-        //            FindMatchingQuestion(civQuestionsAndAnswers, _civQuestionCategoryScroller, selectedItem);
-        //        }
-        //    }
-
-        //    void CivInteract_OnScrollerChanged(UIMenu sender, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
-        //    {
-        //        if (scroller == _civQuestionCategoryScroller)
-        //        {
-        //            while (_civMenu.MenuItems.Count > 1)
-        //            {
-        //                _civMenu.RemoveItemAt(1);
-        //            }
-        //        }
-
-        //        if (scroller == _subMenuScroller)
-        //        {
-        //            _savedSubMenuIndex = _subMenuScroller.Index;
-        //            while (_civMenu.MenuItems.Count > 2)
-        //            {
-        //                _civMenu.RemoveItemAt(2);
-        //            }
-        //        }
-
-        //        PopulateMenu(_civMenu, civQuestionsAndAnswers, _civQuestionCategoryScroller);
-        //        SetMenuWidth(_civMenu);
-        //    }
-        //}
-
-        //internal static void BuildCopMenu(Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> copQuestionsAndAnswers)
-        //{
-        //    if(_copMenu == null)
-        //    {
-        //        _copMenu = new UIMenu("Cop Interaction Menu", "");
-        //        menuPool.Add(_copMenu);
-
-        //        var categoryStrings = new List<string>();
-        //        foreach (KeyValuePair<XAttribute, Dictionary<XElement, List<XElement>>> kvp in copQuestionsAndAnswers)
-        //        {
-        //            categoryStrings.Add(kvp.Key.Value);
-        //        }
-        //        _copMenu.AddItem(_copQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", categoryStrings));
-        //    }
-
-        //    PopulateMenu(_copMenu, copQuestionsAndAnswers, _copQuestionCategoryScroller);
-        //    SetMenuWidth(_copMenu);
-        //    _copMenu.RefreshIndex();
-
-        //    _copMenu.MouseControlsEnabled = false;
-        //    _copMenu.AllowCameraMovement = true;
-
-        //    _copMenu.OnItemSelect += CopInteract_OnItemSelected;
-        //    _copMenu.OnScrollerChange += CopInteract_OnScrollerChanged;
-
-        //    void CopInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
-        //    {
-        //        FindMatchingQuestion(copQuestionsAndAnswers, _copQuestionCategoryScroller, selectedItem);
-        //    }
-
-        //    void CopInteract_OnScrollerChanged(UIMenu sender, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
-        //    {
-        //        if (scroller == _copQuestionCategoryScroller)
-        //        {
-        //            while (sender.MenuItems.Count > 1)
-        //            {
-        //                sender.RemoveItemAt(1);
-        //            }
-        //        }
-
-        //        if (scroller == _subMenuScroller)
-        //        {
-        //            _savedSubMenuIndex = _subMenuScroller.Index;
-        //            while (sender.MenuItems.Count > 2)
-        //            {
-        //                sender.RemoveItemAt(2);
-        //            }
-        //        }
-
-        //        PopulateMenu(sender, copQuestionsAndAnswers, _copQuestionCategoryScroller);
-        //        SetMenuWidth(sender);
-        //    }
-        //}
 
         private static void PopulateMenu(UIMenu menu, Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> questionsAndAnswers, UIMenuListScrollerItem<string> questionCategories)
         {
@@ -337,6 +177,10 @@ namespace BetterPedInteractions
                     if (menu.TitleText.Contains("Civilian") && questionCategories.SelectedItem == "Ped Actions")
                     {
                         AddPedActionsToCivMenu();
+                    }
+                    else if (menu.TitleText.Contains("Cop") && questionCategories.SelectedItem == "Ped Actions")
+                    {
+                        AddPedActionsToCopMenu();
                     }
 
                     GenerateSubMenuScrollerItem(questionCategory);
@@ -353,37 +197,49 @@ namespace BetterPedInteractions
                 turnOffEngine.ForeColor = Color.Gold;
                 menu.AddItem(exitVehicle = new UIMenuItem("Exit vehicle", "Makes ped exit the vehicle"));
                 exitVehicle.ForeColor = Color.Gold;
-                menu.AddItem(_followMe = new UIMenuCheckboxItem("Follow me", false, "Makes ped follow the player"));
+                menu.AddItem(_followMe);
                 _followMe.ForeColor = Color.Gold;
-                if (EntryPoint.focusedPed != null && EntryPoint.focusedPed.Following)
-                {
-                    _followMe.Checked = true;
-                }
-                menu.AddItem(dismiss = new UIMenuItem("Dismiss ped"));
-                dismiss.ForeColor = Color.Gold;
+                menu.AddItem(_dismiss);
+                _dismiss.ForeColor = Color.Gold;
+            }
+
+            void AddPedActionsToCopMenu()
+            {
+                menu.AddItem(_followMe);
+                _followMe.ForeColor = Color.Gold;
+                menu.AddItem(_dismiss);
+                _dismiss.ForeColor = Color.Gold;
             }
 
             void GenerateSubMenuScrollerItem(KeyValuePair<XAttribute, Dictionary<XElement, List<XElement>>> questionCategory)
             {
-                var categoryHasSubMenus = questionCategory.Key.Parent.Elements().Where(x => x.Name == "SubMenu").Any();
+                var categoryHasSubMenus = questionCategory.Key.Parent.Elements().Any(x => x.Name == "SubMenu");
                 //Game.LogTrivial($"Category has submenus: {categoryHasSubMenus}");
                 var subMenus = questionCategory.Key.Parent.Elements().Where(x => x.Name == "SubMenu").ToList();
                 //Game.LogTrivial($"subMenus: {subMenus.Count()}");
 
-                var subMenuValues = new List<string>();
+                var subMenuCategories = new List<string>();
                 if (subMenus.Count() > 0)
                 {
                     foreach (XElement subMenu in subMenus)
                     {
                         //Game.LogTrivial($"subMenu Value: {subMenu.FirstAttribute.Value}");
-                        subMenuValues.Add(subMenu.FirstAttribute.Value);
+                        subMenuCategories.Add(subMenu.FirstAttribute.Value);
                     }
                 }
                 if (categoryHasSubMenus && subMenus.Count() > 0 && menu.MenuItems.Count == 1)
                 {
-                    menu.AddItem(_subMenuScroller = new UIMenuListScrollerItem<string>("Sub Category", "", subMenuValues), 1);
+                    menu.AddItem(_subMenuScroller = new UIMenuListScrollerItem<string>("Sub Category", "", subMenuCategories), 1);
                     _subMenuScroller.ForeColor = Color.SkyBlue;
-                    _subMenuScroller.Index = _savedSubMenuIndex;
+                    if(_savedSubMenuIndex < _subMenuScroller.OptionCount)
+                    {
+                        _subMenuScroller.Index = _savedSubMenuIndex;
+                    }
+                    else
+                    {
+                        _subMenuScroller.Index = 0;
+                    }
+
                 }
             }
 
@@ -466,122 +322,6 @@ namespace BetterPedInteractions
                 }
             }
             menu.Width = width;
-        }
-
-        // Consider a separate class to handle question/response stuff
-        private static void FindMatchingQuestion(Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> questionsAndAnswers, UIMenuListScrollerItem<string> questionCategories, UIMenuItem selectedItem)
-        {
-            var matchingCategory = questionsAndAnswers.Where(x => x.Key.Value == questionCategories.SelectedItem).FirstOrDefault();
-            var questionResponsePair = matchingCategory.Value.Where(x => x.Key.Attribute("question").Value == selectedItem.Text).FirstOrDefault();
-            var focusedPed = EntryPoint.focusedPed;
-
-            GetPedResponse();
-
-            void GetPedResponse()
-            {
-                string _responseType = null;
-
-                XElement response = null;
-                if (_responseType == null || _responseType != null && GetResponseChance() == 3)
-                {
-                    response = questionResponsePair.Value[GetRandomValue()];
-                    if (!_usedResponses.Contains(response))
-                    {
-                        _usedResponses.Add(response);
-                        Game.LogTrivial($"Response added: {response}");
-                    }
-                }
-                else if (_responseType != null && GetResponseChance() < 3)
-                {
-                    response = questionResponsePair.Value.Where(x => x.Attributes().Count() > 0 && x.Attribute("type").Value == _responseType).FirstOrDefault();
-                    if (!_usedResponses.Contains(response))
-                    {
-                        _usedResponses.Add(response);
-                        Game.LogTrivial($"Response added: {response}");
-                    }
-                }
-                if (!_usedQuestionResponsePairs.ContainsKey(questionResponsePair.Key))
-                {
-                    _usedQuestionResponsePairs.Add(questionResponsePair.Key, response);
-                }
-
-                if (response.HasAttributes)
-                {
-                    var responseAttributes = response.Attributes();
-                    foreach (XAttribute attribute in responseAttributes)
-                    {
-                        Game.LogTrivial($"Response attribute: {attribute.Value}");
-                        _responseType = attribute.Value;
-                    }
-                }
-
-                if (focusedPed != null)
-                {
-                    if (_usedQuestionResponsePairs.ContainsKey(questionResponsePair.Key))
-                    {
-                        if (!focusedPed.StoppedTalking)
-                        {
-                            RepeatResponse();
-                        }
-                        if (Settings.EnableAgitation)
-                        {
-                            focusedPed.IncreaseAgitation(true);
-                        }
-                        return;
-                    }
-
-                    // Get question type, adjust Agitation
-                    if (Settings.EnableAgitation)
-                    {
-                        if (questionResponsePair.Key.Attributes().Any(x => x.Name == "type"))
-                        {
-                            if (questionResponsePair.Key.Attribute("type").Value == "interview")
-                            {
-                                focusedPed.DecreaseAgitation();
-                            }
-                            else if (questionResponsePair.Key.Attribute("type").Value == "interrogation")
-                            {
-                                focusedPed.IncreaseAgitation();
-                            }
-                        }
-                    }
-
-                    if (!focusedPed.StoppedTalking)
-                    {
-                        Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~{response.Value}");
-                    }
-                }
-                else
-                {
-                    Game.DisplaySubtitle($"~y~Officer: ~w~{response.Value}");
-                }
-
-                void RepeatResponse()
-                {
-                    var repeatedResponse = _usedQuestionResponsePairs[questionResponsePair.Key].Value.ToLower();
-                    Game.LogTrivial($"This response was already used");
-
-                    if (MathHelper.GetChance(2))
-                    {
-                        Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~I already told you, {repeatedResponse}");
-                    }
-                    else
-                    {
-                        Game.DisplaySubtitle($"~y~Unidentified {focusedPed.Gender}: ~w~Did I s-s-stutter?");
-                    }
-                }
-
-                int GetResponseChance()
-                {
-                    return _randomNumber.Next(0, 4);
-                }
-
-                int GetRandomValue()
-                {
-                    Random r = new Random();
-                    return r.Next(questionResponsePair.Value.Count);
-                }
-            }
         }
     
         private static void Menu_OnScrollerChanged(UIMenu sender, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
