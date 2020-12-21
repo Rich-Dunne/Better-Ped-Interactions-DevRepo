@@ -41,21 +41,11 @@ namespace BetterPedInteractions
                 if (focusedPed.ResponseType == ResponseType.Unspecified || (focusedPed.ResponseType != ResponseType.Unspecified && GetResponseChance() == 3))
                 {
                     response = questionResponsePair.Value[GetRandomResponseValue()];
-                    //if (!_usedResponses.Contains(response))
-                    //{
-                    //    _usedResponses.Add(response);
-                    //    Game.LogTrivial($"Response added: {response}");
-                    //}
                 }
                 // If this is not the ped's first response, choose a response that matches their initial response's type
                 else if (focusedPed.ResponseType != ResponseType.Unspecified && GetResponseChance() < 3)
                 {
                     response = questionResponsePair.Value.FirstOrDefault(x => x.Attributes().Count() > 0 && x.Attribute("type").Value.ToLower() == focusedPed.ResponseType.ToString().ToLower());
-                    //if (!_usedResponses.Contains(response))
-                    //{
-                    //    _usedResponses.Add(response);
-                    //    Game.LogTrivial($"Response added: {response}");
-                    //}
                 }
 
                 // Save the type of response given (truth/lie)
@@ -185,6 +175,7 @@ namespace BetterPedInteractions
                     var numberOfWords = response.Value.Split();
                     //Game.LogTrivial($"Response: {response.Value}, number of words: {numberOfWords.Length}");
                     var timer = 0;
+                    GameFiber.Sleep(500);
                     while(timer < numberOfWords.Length * 500)
                     {
                         timer += 1;
