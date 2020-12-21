@@ -34,8 +34,8 @@
     <Reference Include="RAGENativeUI">
       <HintPath>D:\Program Files\Rockstar Games\Grand Theft Auto V\RAGENativeUI.dll</HintPath>
     </Reference>
-    <Reference Include="RagePluginHookSDK">
-      <HintPath>..\..\Modding Resources\References\RagePluginHookSDK.dll</HintPath>
+    <Reference Include="RagePluginHook">
+      <HintPath>..\..\Modding Resources\References\RagePluginHook.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -53,6 +53,7 @@
     <Compile Include="EntryPoint.cs" />
     <Compile Include="MenuManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ResponseManager.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="XMLReader.cs" />
   </ItemGroup>
