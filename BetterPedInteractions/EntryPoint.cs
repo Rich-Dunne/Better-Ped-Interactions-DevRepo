@@ -126,7 +126,7 @@ namespace BetterPedInteractions
 
             void CloseMenuIfPlayerTooFar()
             {
-                if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
+                if ((focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following) || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive || !focusedPed.Ped.IsAlive)
                 {
                     menuPool.CloseAllMenus();
                 }
