@@ -53,14 +53,6 @@ namespace BetterPedInteractions
                 MenuManager.menuPool.ProcessMenus();
 
                 GameFiber.Yield();
-
-                void CloseMenuIfPlayerTooFar()
-                {
-                    if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
-                    {
-                        menuPool.CloseAllMenus();
-                    }
-                }
             }
 
             Ped GetNearbyPed()
@@ -129,6 +121,14 @@ namespace BetterPedInteractions
                 if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
                 {
                     focusedPed.FacePlayer();
+                }
+            }
+
+            void CloseMenuIfPlayerTooFar()
+            {
+                if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
+                {
+                    menuPool.CloseAllMenus();
                 }
             }
 
