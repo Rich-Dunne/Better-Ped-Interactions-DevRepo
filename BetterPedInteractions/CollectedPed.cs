@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Xml.Linq;
+using static BetterPedInteractions.Settings;
 
 namespace BetterPedInteractions
 {
@@ -9,6 +11,9 @@ namespace BetterPedInteractions
     {
         internal Ped Ped { get; private set; }
         internal Blip Blip { get; private set; }
+        internal Settings.Group Group { get; set; }
+        internal ResponseType ResponseType { get; set; } = ResponseType.Unspecified;
+        internal Dictionary<XElement, XElement> UsedQuestions { get; set; } = new Dictionary<XElement, XElement>();
         internal string Gender { get; private set; }
         internal bool Following { get; private set; } = false;
         internal bool FleeingOrAttacking { get; private set; } = false;
@@ -21,7 +26,7 @@ namespace BetterPedInteractions
             {
                 var oldAgitation = _agitation;
                 int difference;
-                if(value - _agitation == Settings.IncreaseAgitationAmount || value - _agitation == Settings.RepeatedAgitationAmount)
+                if(value - _agitation == IncreaseAgitationAmount || value - _agitation == RepeatedAgitationAmount)
                 {
                     if(value >= 100)
                     {
@@ -37,7 +42,7 @@ namespace BetterPedInteractions
                     OnAgitationChanged(difference, AgitationChange.Increased);
                     return;
                 }
-                if(_agitation - value == Settings.DecreaseAgitationAmount)
+                if(_agitation - value == DecreaseAgitationAmount)
                 {
                     if (value <= 0)
                     {
@@ -80,13 +85,14 @@ namespace BetterPedInteractions
         private bool PlayingNervousAnimation { get; set; } = false;
         internal bool StoppedTalking { get; private set; } = false;
 
-        internal CollectedPed(Ped p)
+        internal CollectedPed(Ped p, Settings.Group group)
         {
             Ped = p;
+            Group = group;
             Ped.BlockPermanentEvents = true;
             Ped.IsPersistent = true;
             CreateBlip();
-            if (Settings.EnableAgitation)
+            if (EnableAgitation)
             {
                 AdjustStartingAgitation();
             }
@@ -110,7 +116,15 @@ namespace BetterPedInteractions
             {
                 Blip = Ped.AttachBlip();
                 Blip.Sprite = (BlipSprite)480;
-                Blip.Color = Color.Gold;
+                if(Group == Settings.Group.Civilian)
+                {
+                    Blip.Color = Color.Gold;
+                }
+                else
+                {
+                    Blip.Color = Color.CadetBlue;
+                }
+
                 Blip.Scale = 0.75f;
             }
         }
@@ -118,48 +132,12 @@ namespace BetterPedInteractions
         private void AdjustStartingAgitation()
         {
             Game.LogTrivial($"Starting agitation: {Agitation}");
-
-            //Game.LogTrivial($"Adjusted agitation: {Agitation}");
-
-            //void SetLowerAgitation(int value)
-            //{
-            //    Game.LogTrivial($"Adjusting for lower agitation");
-            //    if (Agitation - value <= 0)
-            //    {
-            //        Agitation = 0;
-            //    }
-            //    else
-            //    {
-            //        //Game.LogTrivial($"Agitation: {Agitation}");
-            //        //Game.LogTrivial($"Value: {value}");
-            //        Agitation -= value;
-            //        //Game.LogTrivial($"New Agitation: {Agitation}");
-            //    }
-            //    return;
-            //}
-
-            //void SetHigherAgitation(int value)
-            //{
-            //    Game.LogTrivial($"Adjusting for higher agitation");
-            //    if (Agitation + value >= 100)
-            //    {
-            //        Agitation = 100;
-            //    }
-            //    else
-            //    {
-            //        //Game.LogTrivial($"Agitation: {Agitation}");
-            //        //Game.LogTrivial($"Value: {value}");
-            //        Agitation += value;
-            //        //Game.LogTrivial($"New Agitation: {Agitation}");
-            //    }
-            //    return;
-            //}
         }
 
         private void OnAgitationChanged(int difference, AgitationChange agitationChange)
         {
             DisplayNotification();
-            if (Agitation >= Settings.FleeAttackThreshold && !FleeingOrAttacking && MathHelper.GetRandomInteger(11) >= 8)
+            if (Agitation >= FleeAttackThreshold && !FleeingOrAttacking && MathHelper.GetRandomInteger(11) >= 8)
             {
                 FleeingOrAttacking = true;
                 if (MathHelper.GetChance(3))
@@ -172,7 +150,7 @@ namespace BetterPedInteractions
                 }
                 return;
             }
-            if (Agitation >= Settings.StopRespondingThreshold)
+            if (Agitation >= StopRespondingThreshold)
             {
                 if (!StoppedTalking && MathHelper.GetChance(3))
                 {
@@ -183,7 +161,7 @@ namespace BetterPedInteractions
                     Game.DisplayNotification($"~o~[Better Ped Interactions]\n~w~The ped is refusing to speak to you");
                 }
             }
-            if (Agitation >= Settings.NervousThreshold && !PlayingNervousAnimation && !FleeingOrAttacking)
+            if (Agitation >= NervousThreshold && !PlayingNervousAnimation && !FleeingOrAttacking)
             {
                 Game.DisplayNotification($"~o~[Better Ped Interactions]\n~w~The ped appears uncomfortable");
                 PlayNervousAnimation();
