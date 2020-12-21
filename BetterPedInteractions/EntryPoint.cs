@@ -42,27 +42,12 @@ namespace BetterPedInteractions
 
                 if (Game.LocalPlayer.Character.IsOnFoot)
                 {
-                    // Keyboard
                     if ((Settings.ModifierKey == System.Windows.Forms.Keys.None && Game.IsKeyDown(Settings.ToggleKey)) || 
                         (Game.IsKeyDownRightNow(Settings.ModifierKey) && Game.IsKeyDown(Settings.ToggleKey)) || 
                         (Settings.ModifierButton == ControllerButtons.None && Game.IsControllerButtonDown(Settings.ToggleButton)) || 
                         (Game.IsControllerButtonDownRightNow(Settings.ModifierButton) && Game.IsControllerButtonDown(Settings.ToggleButton)))
                     {
-                        var nearbyPed = GetNearbyPed();
-                        if (nearbyPed)
-                        {
-                            var collectedPed = collectedPeds.FirstOrDefault(cp => cp.Ped == nearbyPed);
-                            CollectOrFocusNearbyPed(nearbyPed, collectedPed);
-                            MakeCollectedPedFacePlayer();
-                            if (focusedPed.Group == Settings.Group.Civilian)
-                            {
-                                civMenu.Visible = !civMenu.Visible;
-                            }
-                            else if (focusedPed.Group == Settings.Group.Cop)
-                            {
-                                copMenu.Visible = !copMenu.Visible;
-                            }
-                        }
+                        DisplayMenuForNearbyPed();
                     }
                 }
                 MenuManager.menuPool.ProcessMenus();
@@ -89,6 +74,25 @@ namespace BetterPedInteractions
                 else
                 {
                     return nearbyPed;
+                }
+            }
+
+            void DisplayMenuForNearbyPed()
+            {
+                var nearbyPed = GetNearbyPed();
+                if (nearbyPed)
+                {
+                    var collectedPed = collectedPeds.FirstOrDefault(cp => cp.Ped == nearbyPed);
+                    CollectOrFocusNearbyPed(nearbyPed, collectedPed);
+                    MakeCollectedPedFacePlayer();
+                    if (focusedPed.Group == Settings.Group.Civilian)
+                    {
+                        civMenu.Visible = !civMenu.Visible;
+                    }
+                    else if (focusedPed.Group == Settings.Group.Cop)
+                    {
+                        copMenu.Visible = !copMenu.Visible;
+                    }
                 }
             }
 
