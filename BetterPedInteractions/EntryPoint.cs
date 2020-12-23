@@ -12,8 +12,8 @@ namespace BetterPedInteractions
 {
     internal class EntryPoint
     {
-        internal static List<CollectedPed> collectedPeds = new List<CollectedPed>();
-        internal static CollectedPed focusedPed = null;
+        internal static List<CollectedPed> CollectedPeds = new List<CollectedPed>();
+        internal static CollectedPed FocusedPed = null;
 
         public static void Main()
         {
@@ -79,11 +79,11 @@ namespace BetterPedInteractions
                 if (nearbyPed)
                 {
                     CollectOrFocusNearbyPed(nearbyPed);
-                    if (focusedPed.Group == Settings.Group.Civilian)
+                    if (FocusedPed.Group == Settings.Group.Civilian)
                     {
                         civMenu.Visible = !civMenu.Visible;
                     }
-                    else if (focusedPed.Group == Settings.Group.Cop)
+                    else if (FocusedPed.Group == Settings.Group.Cop)
                     {
                         copMenu.Visible = !copMenu.Visible;
                     }
@@ -92,9 +92,9 @@ namespace BetterPedInteractions
 
             void CloseMenuIfPlayerTooFar()
             {
-                if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
+                if (menuPool.IsAnyMenuOpen() && FocusedPed != null && FocusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) > Settings.InteractDistance && !FocusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
                 {
-                    focusedPed = null;
+                    FocusedPed = null;
                     menuPool.CloseAllMenus();
                 }
             }
@@ -106,13 +106,13 @@ namespace BetterPedInteractions
                     //Game.LogTrivial($"Player character is null.");
                     return;
                 }
-                if(focusedPed == null)
+                if(FocusedPed == null)
                 {
                     //Game.LogTrivial($"focusedPed is null.");
                     return;
                 }
 
-                if(focusedPed.Ped && focusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance)
+                if(FocusedPed.Ped && FocusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) > Settings.InteractDistance)
                 {
                     foreach(UIMenuItem item in civMenu.MenuItems)
                     {
@@ -122,7 +122,7 @@ namespace BetterPedInteractions
                         }
                     }
                 }
-                else if(Game.LocalPlayer.Character && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) <= Settings.InteractDistance)
+                else if(Game.LocalPlayer.Character && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) <= Settings.InteractDistance)
                 {
                     foreach (UIMenuItem item in civMenu.MenuItems)
                     {
@@ -130,7 +130,7 @@ namespace BetterPedInteractions
                     }
                 }
 
-                if (focusedPed.Ped && !focusedPed.Ped.CurrentVehicle)
+                if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle)
                 {
                     MenuManager.rollWindowDown.Enabled = false;
                     MenuManager.turnOffEngine.Enabled = false;
@@ -140,7 +140,7 @@ namespace BetterPedInteractions
                 {
                     MenuManager.rollWindowDown.Enabled = true;
                     MenuManager.exitVehicle.Enabled = true;
-                    if (focusedPed?.Ped && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
+                    if (FocusedPed?.Ped && FocusedPed.Ped.CurrentVehicle.Driver == FocusedPed.Ped)
                     {
                         MenuManager.turnOffEngine.Enabled = true;
                     }
@@ -174,20 +174,21 @@ namespace BetterPedInteractions
                 return;
             }
 
-            var collectedPed = collectedPeds.FirstOrDefault(cp => cp.Ped == nearbyPed);
+            var collectedPed = CollectedPeds.FirstOrDefault(cp => cp.Ped == nearbyPed);
             if (collectedPed == null && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.RelationshipGroup == "UBCOP" || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
             {
-                Game.LogTrivial($"collectedPed is null, collecting nearby COP and assigning as focusedPed.");
-                focusedPed = CollectPed(nearbyPed, Settings.Group.Cop);
+                Game.LogTrivial($"CollectedPed is null, collecting nearby COP and assigning as focusedPed.");
+                FocusedPed = CollectPed(nearbyPed, Settings.Group.Cop);
             }
             else if (collectedPed == null)
             {
-                Game.LogTrivial($"collectedPed is null, collecting nearby CIV and assigning as focusedPed.");
-                focusedPed = CollectPed(nearbyPed, Settings.Group.Civilian);
+                Game.LogTrivial($"CollectedPed is null, collecting nearby CIV and assigning as focusedPed.");
+                FocusedPed = CollectPed(nearbyPed, Settings.Group.Civilian);
             }
             else
             {
-                focusedPed = collectedPed;
+                Game.LogTrivial($"CollectedPed was found in our collection.");
+                FocusedPed = collectedPed;
             }
 
             MakeCollectedPedFacePlayer();
@@ -195,18 +196,18 @@ namespace BetterPedInteractions
             CollectedPed CollectPed(Ped p, Settings.Group group)
             {
                 var newCollectedPed = new CollectedPed(p, group);
-                collectedPeds.Add(newCollectedPed);
+                CollectedPeds.Add(newCollectedPed);
                 Game.LogTrivial($"{p.Model.Name} collected.");
 
-                focusedPed = newCollectedPed;
+                FocusedPed = newCollectedPed;
                 return newCollectedPed;
             }
 
             void MakeCollectedPedFacePlayer()
             {
-                if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
+                if (FocusedPed.Ped.IsOnFoot && !FocusedPed.Following && !FocusedPed.FleeingOrAttacking)
                 {
-                    focusedPed.FacePlayer();
+                    FocusedPed.FacePlayer();
                     Game.LogTrivial($"Ped should be facing player.");
                 }
             }
@@ -215,9 +216,9 @@ namespace BetterPedInteractions
         private static void MyTerminationHandler(object sender, EventArgs e)
         {
             VocalInterface.EndSRE();
-            for(int i = collectedPeds.Count()-1; i >= 0; i--)
+            for(int i = CollectedPeds.Count()-1; i >= 0; i--)
             {
-                collectedPeds[i].Dismiss();
+                CollectedPeds[i].Dismiss();
             }
         }
     }
