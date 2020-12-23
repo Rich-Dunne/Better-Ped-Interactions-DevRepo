@@ -10,13 +10,20 @@ namespace BetterPedInteractions
     {
         internal static void ReadXMLs()
         {
-            var questionsAndAnswers = new List<QuestionResponsePair>();
+            var civQuestionsAndAnswers = new Dictionary<XAttribute, Dictionary<XElement, List<XElement>>>();
+            var copQuestionsAndAnswers = new Dictionary<XAttribute, Dictionary<XElement, List<XElement>>>();
             var defaultDirectory = Directory.GetCurrentDirectory() + "\\plugins\\BetterPedInteractions\\Default";
             var customDirectory = Directory.GetCurrentDirectory() + "\\plugins\\BetterPedInteractions\\Custom";
             
             LoadXMLs(defaultDirectory);
             LoadXMLs(customDirectory);
-            MenuManager.BuildMenus(questionsAndAnswers);
+
+            Game.LogTrivial($"Building civ menu");
+            MenuManager.BuildMenu(Settings.Group.Civilian, civQuestionsAndAnswers);
+            //MenuManager.BuildCivMenu(civQuestionsAndAnswers);
+            Game.LogTrivial($"Building cop menu");
+            MenuManager.BuildMenu(Settings.Group.Cop, copQuestionsAndAnswers);
+            //MenuManager.BuildCopMenu(copQuestionsAndAnswers);
 
             void LoadXMLs(string directory)
             {
@@ -32,40 +39,26 @@ namespace BetterPedInteractions
 
                     foreach (XAttribute category in questionCategories)
                     {
-                        Game.LogTrivial($"Category: {category.Value}");
-                        if(category.Value == "Ped Actions")
-                        {
-                            var questionAnswerPair = new QuestionResponsePair(category);
-                            if (menu == "civilian")
-                            {
-                                questionAnswerPair.Group = Settings.Group.Civilian;
-                            }
-                            else if (menu == "cop")
-                            {
-                                questionAnswerPair.Group = Settings.Group.Cop;
-                            }
-                            questionsAndAnswers.Add(questionAnswerPair);
-                        }
+                        var localQuestions = new Dictionary<XElement, List<XElement>>();
                         foreach (XElement question in questions.Where(x => x.Parent == category.Parent))
                         {
-                            var questionAnswerPair = new QuestionResponsePair(category);
-                            if (menu == "civilian")
-                            {
-                                questionAnswerPair.Group = Settings.Group.Civilian;
-                            }
-                            else if (menu == "cop")
-                            {
-                                questionAnswerPair.Group = Settings.Group.Cop;
-                            }
                             //Game.LogTrivial($"Question: {question.Attribute("question").Value}");
-                            questionAnswerPair.Question = question;
+                            var localResponses = new List<XElement>();
                             foreach (XElement response in responses.Where(r => r.Parent.Attribute("question").Value == question.Attribute("question").Value))
                             {
-                                questionAnswerPair.Responses.Add(response);
+                                localResponses.Add(response);
                                 //Game.LogTrivial($"Response: {response.Value}");
                             }
-                            questionsAndAnswers.Add(questionAnswerPair);
-                            VocalInterface.Phrases.Add(question.Attribute("question").Value);
+                            localQuestions.Add(question, localResponses);
+                        }
+
+                        if (menu == "civilian" && !civQuestionsAndAnswers.ContainsKey(category))
+                        {
+                            civQuestionsAndAnswers.Add(category, localQuestions);
+                        }
+                        else if (menu == "cop" && !copQuestionsAndAnswers.ContainsKey(category))
+                        {
+                            copQuestionsAndAnswers.Add(category, localQuestions);
                         }
                     }
                 }

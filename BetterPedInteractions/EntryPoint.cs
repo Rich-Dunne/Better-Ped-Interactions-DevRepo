@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Windows.Forms;
 
 [assembly: Rage.Attributes.Plugin("Better Ped Interactions", Author = "Rich", Description = "Custom dialogue menus for better ped interactions, among other features to enhance interaction experiences.", PrefersSingleInstance = true)]
 
@@ -20,7 +19,6 @@ namespace BetterPedInteractions
             AppDomain.CurrentDomain.DomainUnload += MyTerminationHandler;
             Settings.LoadSettings();
             XMLReader.ReadXMLs();
-            VocalInterface.Initialize();
             GetAssemblyVersion();
             LoopForUserInput();
 
@@ -42,24 +40,9 @@ namespace BetterPedInteractions
                 CloseMenuIfPlayerTooFar();
                 DisableMenuItems();
 
-                if ((Settings.SpeechKeyModifier == Keys.None && Game.IsKeyDown(Settings.SpeechKey)) ||
-                    (Game.IsKeyDownRightNow(Settings.SpeechKeyModifier) && Game.IsKeyDown(Settings.SpeechKey)) ||
-                    (Settings.SpeechButtonModifier == ControllerButtons.None && Game.IsControllerButtonDown(Settings.SpeechButton)) ||
-                    (Game.IsControllerButtonDownRightNow(Settings.SpeechButtonModifier) && Game.IsControllerButtonDown(Settings.SpeechButton)))
-                {
-                    if(GetNearbyPed() && !VocalInterface.CapturingInput)
-                    {
-                        VocalInterface.CaptureUserInput();
-                    }
-                }
-                //if(GetNearbyPed() && (Game.IsKeyDown(Settings.SpeechKey) || Game.IsControllerButtonDown(Settings.SpeechButton)) && !VocalInterface.CapturingInput)
-                //{
-                //    VocalInterface.CaptureUserInput();
-                //}
-
                 if (Game.LocalPlayer.Character.IsOnFoot)
                 {
-                    if ((Settings.ModifierKey == Keys.None && Game.IsKeyDown(Settings.ToggleKey)) || 
+                    if ((Settings.ModifierKey == System.Windows.Forms.Keys.None && Game.IsKeyDown(Settings.ToggleKey)) || 
                         (Game.IsKeyDownRightNow(Settings.ModifierKey) && Game.IsKeyDown(Settings.ToggleKey)) || 
                         (Settings.ModifierButton == ControllerButtons.None && Game.IsControllerButtonDown(Settings.ToggleButton)) || 
                         (Game.IsControllerButtonDownRightNow(Settings.ModifierButton) && Game.IsControllerButtonDown(Settings.ToggleButton)))
@@ -72,12 +55,28 @@ namespace BetterPedInteractions
                 GameFiber.Yield();
             }
 
+            Ped GetNearbyPed()
+            {
+                var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
+                if (!nearbyPed)
+                {
+                    Game.LogTrivial($"nearbyPed is null.");
+                    return null;
+                }
+                else
+                {
+                    return nearbyPed;
+                }
+            }
+
             void DisplayMenuForNearbyPed()
             {
                 var nearbyPed = GetNearbyPed();
                 if (nearbyPed)
                 {
-                    CollectOrFocusNearbyPed(nearbyPed);
+                    var collectedPed = collectedPeds.FirstOrDefault(cp => cp.Ped == nearbyPed);
+                    CollectOrFocusNearbyPed(nearbyPed, collectedPed);
+                    MakeCollectedPedFacePlayer();
                     if (focusedPed.Group == Settings.Group.Civilian)
                     {
                         civMenu.Visible = !civMenu.Visible;
@@ -89,11 +88,46 @@ namespace BetterPedInteractions
                 }
             }
 
+            void CollectOrFocusNearbyPed(Ped nearbyPed, CollectedPed collectedPed)
+            {
+                if (collectedPed == null && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.RelationshipGroup == "UBCOP" || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
+                {
+                    Game.LogTrivial($"collectedPed is null, collecting nearby COP and assigning as focusedPed.");
+                    focusedPed = CollectPed(nearbyPed, Settings.Group.Cop);
+                }
+                else if (collectedPed == null)
+                {
+                    Game.LogTrivial($"collectedPed is null, collecting nearby CIV and assigning as focusedPed.");
+                    focusedPed = CollectPed(nearbyPed, Settings.Group.Civilian);
+                }
+                else
+                {
+                    focusedPed = collectedPed;
+                }
+            }
+
+            CollectedPed CollectPed(Ped p, Settings.Group group)
+            {
+                var newCollectedPed = new CollectedPed(p, group);
+                collectedPeds.Add(newCollectedPed);
+                Game.LogTrivial($"{p.Model.Name} collected.");
+
+                focusedPed = newCollectedPed;
+                return newCollectedPed;
+            }
+
+            void MakeCollectedPedFacePlayer()
+            {
+                if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
+                {
+                    focusedPed.FacePlayer();
+                }
+            }
+
             void CloseMenuIfPlayerTooFar()
             {
                 if (focusedPed != null && focusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(focusedPed.Ped) > Settings.InteractDistance && !focusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
                 {
-                    focusedPed = null;
                     menuPool.CloseAllMenus();
                 }
             }
@@ -151,68 +185,8 @@ namespace BetterPedInteractions
             }
         }
 
-        internal static Ped GetNearbyPed()
-        {
-            var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
-            if (!nearbyPed)
-            {
-                //Game.LogTrivial($"nearbyPed is null.");
-                return null;
-            }
-            else
-            {
-                return nearbyPed;
-            }
-        }
-
-        internal static void CollectOrFocusNearbyPed(Ped nearbyPed)
-        {
-            if (!nearbyPed)
-            {
-                Game.LogTrivial($"Nearby ped is null.");
-                return;
-            }
-
-            var collectedPed = collectedPeds.FirstOrDefault(cp => cp.Ped == nearbyPed);
-            if (collectedPed == null && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.RelationshipGroup == "UBCOP" || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
-            {
-                Game.LogTrivial($"collectedPed is null, collecting nearby COP and assigning as focusedPed.");
-                focusedPed = CollectPed(nearbyPed, Settings.Group.Cop);
-            }
-            else if (collectedPed == null)
-            {
-                Game.LogTrivial($"collectedPed is null, collecting nearby CIV and assigning as focusedPed.");
-                focusedPed = CollectPed(nearbyPed, Settings.Group.Civilian);
-            }
-            else
-            {
-                focusedPed = collectedPed;
-            }
-
-            MakeCollectedPedFacePlayer();
-
-            CollectedPed CollectPed(Ped p, Settings.Group group)
-            {
-                var newCollectedPed = new CollectedPed(p, group);
-                collectedPeds.Add(newCollectedPed);
-                Game.LogTrivial($"{p.Model.Name} collected.");
-
-                focusedPed = newCollectedPed;
-                return newCollectedPed;
-            }
-
-            void MakeCollectedPedFacePlayer()
-            {
-                if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
-                {
-                    focusedPed.FacePlayer();
-                }
-            }
-        }
-
         private static void MyTerminationHandler(object sender, EventArgs e)
         {
-            VocalInterface.EndSRE();
             for(int i = collectedPeds.Count()-1; i >= 0; i--)
             {
                 collectedPeds[i].Dismiss();

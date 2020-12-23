@@ -17,28 +17,28 @@ namespace BetterPedInteractions
         private static UIMenuItem _dismiss = new UIMenuItem("Dismiss ped", "Dismisses the focused ped.");
         private static UIMenuCheckboxItem _followMe = new UIMenuCheckboxItem("Follow me", false, "Makes the ped follow the player");
         private static UIMenuListScrollerItem<string> _civQuestionCategoryScroller, _copQuestionCategoryScroller, _subMenuScroller;
-        private static List<QuestionResponsePair> _questionAnswerPairs;
+        private static Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> _civQuestionsAndAnswers, _copQuestionsAndAnswers;
         private static int _savedSubMenuIndex = 0;
 
-        internal static void BuildMenus(List<QuestionResponsePair> questionAnswerPairs)
+        internal static void BuildMenu(Settings.Group group, Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> questionsAndAnswers)
         {
-            _questionAnswerPairs = questionAnswerPairs;
-            Game.LogTrivial($"QuestionAnswerPairs count: {_questionAnswerPairs.Count}");
-            Game.LogTrivial($"CIV QAPairs: {_questionAnswerPairs.Where(x => x.Group == Settings.Group.Civilian).Count()}");
-            ResponseManager.AssignQuestionsAndAnswers(_questionAnswerPairs);
-
-            BuildCivMenu();
-            BuildCopMenu();
-
-            void BuildCivMenu()
+            if (group == Settings.Group.Civilian)
             {
+                _civQuestionsAndAnswers = new Dictionary<XAttribute, Dictionary<XElement, List<XElement>>>();
+                foreach (var QAPair in questionsAndAnswers)
+                    _civQuestionsAndAnswers.Add(QAPair.Key, QAPair.Value);
+
                 _civMenu = new UIMenu("Civilian Interaction Menu", "");
                 menuPool.Add(_civMenu);
+                
+                var categories = new List<string>();
+                foreach (KeyValuePair<XAttribute, Dictionary<XElement, List<XElement>>> kvp in _civQuestionsAndAnswers)
+                {
+                    categories.Add(kvp.Key.Value);
+                }
+                _civMenu.AddItem(_civQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", categories));
 
-                var civCategories = _questionAnswerPairs.Where(x => x.Group == Settings.Group.Civilian).Select(y => y.Category.Value).Distinct().ToList();
-                _civMenu.AddItem(_civQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civCategories));
-
-                PopulateMenu(_civMenu, _civQuestionCategoryScroller);
+                PopulateMenu(_civMenu, _civQuestionsAndAnswers, _civQuestionCategoryScroller);
                 SetMenuWidth(_civMenu);
                 _civMenu.RefreshIndex();
 
@@ -98,21 +98,29 @@ namespace BetterPedInteractions
 
                     if (selectedItem.GetType() != typeof(UIMenuListScrollerItem<string>) && selectedItem.GetType() != typeof(UIMenuCheckboxItem))
                     {
-                        ResponseManager.FindMatchingQuestion(_civQuestionCategoryScroller, selectedItem);
+                        ResponseManager.FindMatchingQuestion(_civQuestionsAndAnswers, _civQuestionCategoryScroller, selectedItem);
                         return;
                     }
                 }
             }
 
-            void BuildCopMenu()
+            if(group == Settings.Group.Cop)
             {
+                _copQuestionsAndAnswers = new Dictionary<XAttribute, Dictionary<XElement, List<XElement>>>();
+                foreach (var QAPair in questionsAndAnswers)
+                    _copQuestionsAndAnswers.Add(QAPair.Key, QAPair.Value);
+
                 _copMenu = new UIMenu("Cop Interaction Menu", "");
                 menuPool.Add(_copMenu);
 
-                var copCategories = _questionAnswerPairs.Where(x => x.Group == Settings.Group.Cop).Select(y => y.Category.Value).Distinct().ToList();
-                _copMenu.AddItem(_copQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", copCategories));
+                var categories = new List<string>();
+                foreach (KeyValuePair<XAttribute, Dictionary<XElement, List<XElement>>> kvp in _copQuestionsAndAnswers)
+                {
+                    categories.Add(kvp.Key.Value);
+                }
+                _copMenu.AddItem(_copQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", categories));
 
-                PopulateMenu(_copMenu, _copQuestionCategoryScroller);
+                PopulateMenu(_copMenu, _copQuestionsAndAnswers, _copQuestionCategoryScroller);
                 SetMenuWidth(_copMenu);
                 _copMenu.RefreshIndex();
 
@@ -153,58 +161,62 @@ namespace BetterPedInteractions
 
                     if (selectedItem.GetType() != typeof(UIMenuListScrollerItem<string>) && selectedItem.GetType() != typeof(UIMenuCheckboxItem))
                     {
-                        ResponseManager.FindMatchingQuestion(_copQuestionCategoryScroller, selectedItem);
+                        ResponseManager.FindMatchingQuestion(_copQuestionsAndAnswers, _copQuestionCategoryScroller, selectedItem);
                         return;
                     }
                 }
             }
         }
 
-        private static void PopulateMenu(UIMenu menu, UIMenuListScrollerItem<string> categoryScroller)
+        private static void PopulateMenu(UIMenu menu, Dictionary<XAttribute, Dictionary<XElement, List<XElement>>> questionsAndAnswers, UIMenuListScrollerItem<string> questionCategories)
         {
-            var currentCategory = _questionAnswerPairs.FirstOrDefault(x => x.Category.Value == categoryScroller.SelectedItem).Category;
-            if (categoryScroller.SelectedItem == "Ped Actions")
+            foreach (KeyValuePair<XAttribute, Dictionary<XElement, List<XElement>>> questionCategory in questionsAndAnswers)
             {
-                AddPedActionsToMenu();
-            }
-            else
-            {
-                GenerateSubMenuScrollerItem(currentCategory);
-                foreach (QuestionResponsePair QAPair in _questionAnswerPairs.Where(x => x.Category.Value == categoryScroller.SelectedItem))
+                if (questionCategory.Key.Value == questionCategories.SelectedItem)
                 {
-                    AddQuestionsToMenu(QAPair);
+                    if (menu.TitleText.Contains("Civilian") && questionCategories.SelectedItem == "Ped Actions")
+                    {
+                        AddPedActionsToCivMenu();
+                    }
+                    else if (menu.TitleText.Contains("Cop") && questionCategories.SelectedItem == "Ped Actions")
+                    {
+                        AddPedActionsToCopMenu();
+                    }
+
+                    GenerateSubMenuScrollerItem(questionCategory);
+
+                    AddQuestionsToMenu(questionCategory);
                 }
             }
 
-
-            void AddPedActionsToMenu()
+            void AddPedActionsToCivMenu()
             {
-                if (menu.TitleText.Contains("Civilian"))
-                {
-                    menu.AddItem(rollWindowDown = new UIMenuItem("Roll down window", "Rolls down the ped's window"));
-                    rollWindowDown.ForeColor = Color.Gold;
-                    menu.AddItem(turnOffEngine = new UIMenuItem("Turn engine off", "Makes ped turn off the engine"));
-                    turnOffEngine.ForeColor = Color.Gold;
-                    menu.AddItem(exitVehicle = new UIMenuItem("Exit vehicle", "Makes ped exit the vehicle"));
-                    exitVehicle.ForeColor = Color.Gold;
-                }
+                menu.AddItem(rollWindowDown = new UIMenuItem("Roll down window", "Rolls down the ped's window"));
+                rollWindowDown.ForeColor = Color.Gold;
+                menu.AddItem(turnOffEngine = new UIMenuItem("Turn engine off", "Makes ped turn off the engine"));
+                turnOffEngine.ForeColor = Color.Gold;
+                menu.AddItem(exitVehicle = new UIMenuItem("Exit vehicle", "Makes ped exit the vehicle"));
+                exitVehicle.ForeColor = Color.Gold;
                 menu.AddItem(_followMe);
                 _followMe.ForeColor = Color.Gold;
                 menu.AddItem(_dismiss);
                 _dismiss.ForeColor = Color.Gold;
             }
 
-            void GenerateSubMenuScrollerItem(XAttribute category)
+            void AddPedActionsToCopMenu()
             {
-                var categoryHasSubMenus = category.Parent.Elements().Any(x => x.Name == "SubMenu");
-                //Game.LogTrivial($"Category has submenus: {categoryHasSubMenus}");
-                if (!categoryHasSubMenus)
-                {
-                    return;
-                }
+                menu.AddItem(_followMe);
+                _followMe.ForeColor = Color.Gold;
+                menu.AddItem(_dismiss);
+                _dismiss.ForeColor = Color.Gold;
+            }
 
-                var subMenus = category.Parent.Elements().Where(x => x.Name == "SubMenu").ToList();
-                //Game.LogTrivial($"submenus: {subMenus.Count()}");
+            void GenerateSubMenuScrollerItem(KeyValuePair<XAttribute, Dictionary<XElement, List<XElement>>> questionCategory)
+            {
+                var categoryHasSubMenus = questionCategory.Key.Parent.Elements().Any(x => x.Name == "SubMenu");
+                //Game.LogTrivial($"Category has submenus: {categoryHasSubMenus}");
+                var subMenus = questionCategory.Key.Parent.Elements().Where(x => x.Name == "SubMenu").ToList();
+                //Game.LogTrivial($"subMenus: {subMenus.Count()}");
 
                 var subMenuCategories = new List<string>();
                 if (subMenus.Count() > 0)
@@ -231,47 +243,35 @@ namespace BetterPedInteractions
                 }
             }
 
-            void AddQuestionsToMenu(QuestionResponsePair QAPair)
+            void AddQuestionsToMenu(KeyValuePair<XAttribute, Dictionary<XElement, List<XElement>>> questionCategory)
             {
-                //Game.LogTrivial($"Question: {QAPair.Question.Attribute("question").Value}");
-                var questionHasSubMenu = QAPair.Question.Attributes().Any(x => x.Name == "submenu");
-                //Game.LogTrivial($"Question has submenu: {questionHasSubMenu}");
-                var subMenu = QAPair.Question.Attributes().Where(x => x.Name == "submenu").FirstOrDefault();
-
-                if (questionHasSubMenu)
+                foreach (KeyValuePair<XElement, List<XElement>> questionResponsePair in questionCategory.Value)
                 {
-                    if (_subMenuScroller.SelectedItem == subMenu.Value && ((QAPair.Group == Settings.Group.Civilian && menu.TitleText.Contains("Civilian")) || (QAPair.Group == Settings.Group.Cop && menu.TitleText.Contains("Cop"))))
+                    var questionHasSubMenu = questionResponsePair.Key.Attributes().Any(x => x.Name == "submenu");
+                    var subMenu = questionResponsePair.Key.Attributes().Where(x => x.Name == "submenu").FirstOrDefault();
+                    if (questionHasSubMenu && subMenu != null && _subMenuScroller.SelectedItem == subMenu.Value)
                     {
-                        AddSubMenuItems(QAPair);
+                        menu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Key.Attribute("question").Value));
+                        var attribute = questionResponsePair.Key.Attributes().Where(x => x.Name == "type").FirstOrDefault();
+                        if (attribute != null)
+                        {
+                            if (attribute.Value.ToLower() == "interview")
+                            {
+                                questionItem.ForeColor = Color.LimeGreen;
+                            }
+                            else if (attribute.Value.ToLower() == "interrogation")
+                            {
+                                questionItem.ForeColor = Color.IndianRed;
+                            }
+                            else if (attribute.Value.ToLower() == "action")
+                            {
+                                questionItem.ForeColor = Color.Gold;
+                            }
+                        }
                     }
-
-                }
-                else if (!questionHasSubMenu && (menu.MenuItems.Count == 1 || menu.MenuItems.Count > 1 && menu.MenuItems[1].Text != "Sub Category"))
-                {
-                    if ((QAPair.Group == Settings.Group.Civilian && menu.TitleText.Contains("Civilian")) || (QAPair.Group == Settings.Group.Cop && menu.TitleText.Contains("Cop")))
+                    else if (!questionHasSubMenu && (menu.MenuItems.Count == 1 || menu.MenuItems.Count > 1 && menu.MenuItems[1].Text != "Sub Category"))
                     {
-                        menu.AddItem(questionItem = new UIMenuItem(QAPair.Question.Attribute("question").Value));
-                    }
-                }
-            }
-
-            void AddSubMenuItems(QuestionResponsePair questionResponsePair)
-            {
-                menu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Question.Attribute("question").Value));
-                var attribute = questionResponsePair.Question.Attributes().Where(x => x.Name == "type").FirstOrDefault();
-                if (attribute != null)
-                {
-                    if (attribute.Value.ToLower() == "interview")
-                    {
-                        questionItem.ForeColor = Color.LimeGreen;
-                    }
-                    else if (attribute.Value.ToLower() == "interrogation")
-                    {
-                        questionItem.ForeColor = Color.IndianRed;
-                    }
-                    else if (attribute.Value.ToLower() == "action")
-                    {
-                        questionItem.ForeColor = Color.Gold;
+                        menu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Key.Attribute("question").Value));
                     }
                 }
             }
@@ -338,11 +338,11 @@ namespace BetterPedInteractions
 
             if (sender.TitleText.Contains("Civilian"))
             {
-                PopulateMenu(sender, _civQuestionCategoryScroller);
+                PopulateMenu(sender, _civQuestionsAndAnswers, _civQuestionCategoryScroller);
             }
             else if (sender.TitleText.Contains("Cop"))
             {
-                PopulateMenu(sender, _copQuestionCategoryScroller);
+                PopulateMenu(sender, _copQuestionsAndAnswers, _copQuestionCategoryScroller);
             }
             SetMenuWidth(sender);
 
