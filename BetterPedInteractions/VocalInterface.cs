@@ -46,7 +46,7 @@ namespace BetterPedInteractions
         internal static void CaptureUserInput()
         {
             //CapturingInput = true;
-            Game.DisplayNotification($"Audio capture ~b~started");
+            Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~b~started");
             SRE.RecognizeAsync(RecognizeMode.Multiple);
             GameFiber.StartNew(() =>
             {
@@ -113,7 +113,7 @@ namespace BetterPedInteractions
                 SpeechDetected = false;
                 SpeechRecognized = true;
                 ////PlayerTalking = false;
-                Game.DisplayNotification($"~g~Audio capture complete.");
+                Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nSpeech ~g~recognized:~w~ {e.Result.Text}");
             }
             catch (Exception ex)
             {
@@ -122,21 +122,21 @@ namespace BetterPedInteractions
                 //CapturingInput = false;
                 SpeechDetected = false;
                 //PlayerTalking = false;
-                Game.DisplayNotification($"~r~Audio capture error");
+                Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~r~error");
             }
         }
 
         private static void SRE_RecognizeCompleted(object sender, RecognizeCompletedEventArgs e)
         {
             Game.LogTrivial($"Recognition completed.");
-            Game.DisplayNotification($"~y~Audio capture ended.");
+            Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~y~ended~w~.");
             //CapturingInput = false;
         }
 
         private static void SRE_SpeechRecognitionRejected(object sender, SpeechRecognitionRejectedEventArgs e)
         {
-            Game.LogTrivial($"Could not recognize speech..");
-            Game.DisplayNotification($"~r~Could not recognize speech.");
+            Game.LogTrivial($"Could not recognize speech.");
+            Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nSpeech ~r~not recognized~w~.");
             SpeechDetected = false;
         }
 
