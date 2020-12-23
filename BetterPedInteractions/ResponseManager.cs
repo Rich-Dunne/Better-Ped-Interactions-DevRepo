@@ -33,7 +33,8 @@ namespace BetterPedInteractions
 
         private static void ChoosePedResponse(QuestionResponsePair questionResponsePair)
         {
-            var focusedPed = EntryPoint.focusedPed;
+            var focusedPed = EntryPoint.FocusedPed;
+            Game.LogTrivial($"Focused ped: {focusedPed.Ped.Model.Name}");
             XElement response = null;
 
             // If the question was already asked, the ped needs to repeat themselves instead of assigning a new response
