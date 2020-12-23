@@ -51,7 +51,7 @@ namespace BetterPedInteractions
 
                 void CivInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
                 {
-                    var focusedPed = EntryPoint.focusedPed;
+                    var focusedPed = EntryPoint.FocusedPed;
 
                     if (checkboxItem == _followMe)
                     {
@@ -68,7 +68,7 @@ namespace BetterPedInteractions
 
                 void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
                 {
-                    var focusedPed = EntryPoint.focusedPed;
+                    var focusedPed = EntryPoint.FocusedPed;
 
                     if (selectedItem == _dismiss)
                     {
@@ -125,7 +125,7 @@ namespace BetterPedInteractions
 
                 void CopInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
                 {
-                    var focusedPed = EntryPoint.focusedPed;
+                    var focusedPed = EntryPoint.FocusedPed;
 
                     if (checkboxItem == _followMe)
                     {
@@ -142,7 +142,7 @@ namespace BetterPedInteractions
 
                 void CopInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
                 {
-                    var focusedPed = EntryPoint.focusedPed;
+                    var focusedPed = EntryPoint.FocusedPed;
 
                     if (selectedItem == _dismiss)
                     {

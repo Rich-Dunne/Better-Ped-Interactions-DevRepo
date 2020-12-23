@@ -415,8 +415,8 @@ namespace BetterPedInteractions
                 }
                 Ped.BlockPermanentEvents = false;
             }
-            EntryPoint.collectedPeds.Remove(this);
-            EntryPoint.focusedPed = null;
+            EntryPoint.CollectedPeds.Remove(this);
+            EntryPoint.FocusedPed = null;
 
             void DeleteBlip()
             {
@@ -439,9 +439,9 @@ namespace BetterPedInteractions
                 Dismiss();
                 return;
             }
-            else if (EntryPoint.collectedPeds.Contains(this))
+            else if (EntryPoint.CollectedPeds.Contains(this))
             {
-                EntryPoint.collectedPeds.Remove(this);
+                EntryPoint.CollectedPeds.Remove(this);
                 Game.LogTrivial($"An invalid ped has been removed from the collection.");
                 return;
             }
