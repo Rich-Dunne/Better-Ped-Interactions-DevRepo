@@ -22,6 +22,7 @@ namespace BetterPedInteractions
             XMLReader.ReadXMLs();
             VocalInterface.Initialize();
             GetAssemblyVersion();
+            VocalInterface.CaptureUserInput();
             LoopForUserInput();
 
             void GetAssemblyVersion()
@@ -42,16 +43,16 @@ namespace BetterPedInteractions
                 CloseMenuIfPlayerTooFar();
                 DisableMenuItems();
 
-                if ((Settings.SpeechKeyModifier == Keys.None && Game.IsKeyDown(Settings.SpeechKey)) ||
-                    (Game.IsKeyDownRightNow(Settings.SpeechKeyModifier) && Game.IsKeyDown(Settings.SpeechKey)) ||
-                    (Settings.SpeechButtonModifier == ControllerButtons.None && Game.IsControllerButtonDown(Settings.SpeechButton)) ||
-                    (Game.IsControllerButtonDownRightNow(Settings.SpeechButtonModifier) && Game.IsControllerButtonDown(Settings.SpeechButton)))
-                {
-                    if(GetNearbyPed() && !VocalInterface.CapturingInput)
-                    {
-                        VocalInterface.CaptureUserInput();
-                    }
-                }
+                //if ((Settings.SpeechKeyModifier == Keys.None && Game.IsKeyDown(Settings.SpeechKey)) ||
+                //    (Game.IsKeyDownRightNow(Settings.SpeechKeyModifier) && Game.IsKeyDown(Settings.SpeechKey)) ||
+                //    (Settings.SpeechButtonModifier == ControllerButtons.None && Game.IsControllerButtonDown(Settings.SpeechButton)) ||
+                //    (Game.IsControllerButtonDownRightNow(Settings.SpeechButtonModifier) && Game.IsControllerButtonDown(Settings.SpeechButton)))
+                //{
+                //    if(GetNearbyPed() && !VocalInterface.CapturingInput)
+                //    {
+                //        VocalInterface.CaptureUserInput();
+                //    }
+                //}
                 //if(GetNearbyPed() && (Game.IsKeyDown(Settings.SpeechKey) || Game.IsControllerButtonDown(Settings.SpeechButton)) && !VocalInterface.CapturingInput)
                 //{
                 //    VocalInterface.CaptureUserInput();
@@ -206,6 +207,7 @@ namespace BetterPedInteractions
                 if (focusedPed.Ped.IsOnFoot && !focusedPed.Following && !focusedPed.FleeingOrAttacking)
                 {
                     focusedPed.FacePlayer();
+                    Game.LogTrivial($"Ped should be facing player.");
                 }
             }
         }
