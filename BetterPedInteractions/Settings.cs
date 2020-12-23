@@ -23,7 +23,12 @@ namespace BetterPedInteractions
         internal static Keys ModifierKey = Keys.LShiftKey;
         internal static ControllerButtons ToggleButton = ControllerButtons.Y;
         internal static ControllerButtons ModifierButton = ControllerButtons.A;
+        internal static Keys SpeechKey = Keys.LMenu;
+        internal static Keys SpeechKeyModifier = Keys.None;
+        internal static ControllerButtons SpeechButton = ControllerButtons.DPadUp;
+        internal static ControllerButtons SpeechButtonModifier = ControllerButtons.None;
         internal static float InteractDistance = 1.5f;
+        internal static string SpeechLanguage = "en-US";
         internal static bool EnableAgitation = true;
         internal static int IncreaseAgitationAmount = 5, DecreaseAgitationAmount = 2, RepeatedAgitationAmount = 1, NervousThreshold = 40, StopRespondingThreshold = 60,
              FleeAttackThreshold = 80;
@@ -37,8 +42,12 @@ namespace BetterPedInteractions
             ModifierKey = ini.ReadEnum("Keybindings", "ModifierKey", Keys.LShiftKey);
             ToggleButton = ini.ReadEnum("Keybindings", "ToggleButton", ControllerButtons.LeftShoulder);
             ModifierButton = ini.ReadEnum("Keybindings", "ModifierButton", ControllerButtons.DPadDown);
+            SpeechKey = ini.ReadEnum("Keybindings", "SpeechKey", Keys.LMenu);
+            SpeechKeyModifier = ini.ReadEnum("KeyBindings", "SpeechKeyModifier", Keys.None);
+            SpeechButton = ini.ReadEnum("Keybindings", "SpeechButton", ControllerButtons.DPadUp);
+            SpeechButtonModifier = ini.ReadEnum("Keybindings", "SpeechButtonModifier", ControllerButtons.None);
             InteractDistance = (float)ini.ReadDouble("Other Settings", "InteractDistance", 2f);
-
+            SpeechLanguage = ini.ReadString("Other Settings", "SpeechLanguage", "en-US");
             EnableAgitation = ini.ReadBoolean("Agitation Settings", "EnableAgitation", true);
             IncreaseAgitationAmount = ini.ReadInt32("Agitation Settings", "IncreaseAgitationAmount", 5);
             DecreaseAgitationAmount = ini.ReadInt32("Agitation Settings", "DecreaseAgitationAmount", 2);
