@@ -12,11 +12,18 @@ namespace BetterPedInteractions
             Cop = 1
         }
 
-        internal enum ResponseType
+        internal enum PromptType
         {
             Unspecified = 0,
             Interview = 1,
             Interrogation = 2
+        }
+
+        internal enum ResponseHonesty
+        {
+            Unspecified = 0,
+            Truth = 1,
+            Lie = 2
         }
 
         internal static Keys ToggleKey = Keys.E;
