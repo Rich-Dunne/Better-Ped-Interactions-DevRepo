@@ -2,6 +2,7 @@
 using RAGENativeUI.Elements;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
@@ -22,7 +23,6 @@ namespace BetterPedInteractions
             XMLReader.ReadXMLs();
             VocalInterface.Initialize();
             GetAssemblyVersion();
-            VocalInterface.CaptureUserInput();
             LoopForUserInput();
 
             void GetAssemblyVersion()
@@ -34,7 +34,7 @@ namespace BetterPedInteractions
 
         private static void LoopForUserInput()
         {
-            var menuPool = MenuManager.menuPool;
+            var menuPool = MenuManager.MenuPool;
             var copMenu = menuPool.FirstOrDefault(m => m.TitleText == "Cop Interaction Menu");
             var civMenu = menuPool.FirstOrDefault(m => m.TitleText == "Civilian Interaction Menu");
 
@@ -43,20 +43,25 @@ namespace BetterPedInteractions
                 CloseMenuIfPlayerTooFar();
                 DisableMenuItems();
 
-                //if ((Settings.SpeechKeyModifier == Keys.None && Game.IsKeyDown(Settings.SpeechKey)) ||
-                //    (Game.IsKeyDownRightNow(Settings.SpeechKeyModifier) && Game.IsKeyDown(Settings.SpeechKey)) ||
-                //    (Settings.SpeechButtonModifier == ControllerButtons.None && Game.IsControllerButtonDown(Settings.SpeechButton)) ||
-                //    (Game.IsControllerButtonDownRightNow(Settings.SpeechButtonModifier) && Game.IsControllerButtonDown(Settings.SpeechButton)))
-                //{
-                //    if(GetNearbyPed() && !VocalInterface.CapturingInput)
-                //    {
-                //        VocalInterface.CaptureUserInput();
-                //    }
-                //}
-                //if(GetNearbyPed() && (Game.IsKeyDown(Settings.SpeechKey) || Game.IsControllerButtonDown(Settings.SpeechButton)) && !VocalInterface.CapturingInput)
-                //{
-                //    VocalInterface.CaptureUserInput();
-                //}
+                // If button pressed, enable or disable persistent audio capture
+                if (VocalInterface.AllowVoiceCapture && 
+                    (Settings.SpeechKeyModifier == Keys.None && Game.IsKeyDown(Settings.SpeechKey)) ||
+                    (Game.IsKeyDownRightNow(Settings.SpeechKeyModifier) && Game.IsKeyDown(Settings.SpeechKey)) ||
+                    (Settings.SpeechButtonModifier == ControllerButtons.None && Game.IsControllerButtonDown(Settings.SpeechButton)) ||
+                    (Game.IsControllerButtonDownRightNow(Settings.SpeechButtonModifier) && Game.IsControllerButtonDown(Settings.SpeechButton)))
+                {
+                    VocalInterface.CapturingInput = !VocalInterface.CapturingInput;
+                    if (VocalInterface.CapturingInput)
+                    {
+                        VocalInterface.StartRecognition();
+                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~b~started~w~.");
+                    }
+                    else
+                    {
+                        VocalInterface.EndRecognition();
+                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~o~ended~w~.");
+                    }
+                }
 
                 if (Game.LocalPlayer.Character.IsOnFoot)
                 {
@@ -68,7 +73,7 @@ namespace BetterPedInteractions
                         DisplayMenuForNearbyPed();
                     }
                 }
-                MenuManager.menuPool.ProcessMenus();
+                MenuManager.MenuPool.ProcessMenus();
 
                 GameFiber.Yield();
             }
@@ -81,10 +86,12 @@ namespace BetterPedInteractions
                     CollectOrFocusNearbyPed(nearbyPed);
                     if (FocusedPed.Group == Settings.Group.Civilian)
                     {
+                        MenuManager.PopulateMenu(civMenu, MenuManager.CivParentCategoryScroller);
                         civMenu.Visible = !civMenu.Visible;
                     }
                     else if (FocusedPed.Group == Settings.Group.Cop)
                     {
+                        MenuManager.PopulateMenu(copMenu, MenuManager.CopParentCategoryScroller);
                         copMenu.Visible = !copMenu.Visible;
                     }
                 }
@@ -119,6 +126,7 @@ namespace BetterPedInteractions
                         if(item.Text != "Follow me")
                         {
                             item.Enabled = false;
+                            item.BackColor = Color.Gray;
                         }
                     }
                 }
@@ -130,23 +138,33 @@ namespace BetterPedInteractions
                     }
                 }
 
-                if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle)
+                foreach(MenuItem action in MenuManager.Actions.Where(x => x.MenuPrompt.Attribute("action").Value != "follow" && x.MenuPrompt.Attribute("action").Value != "dismiss"))
                 {
-                    MenuManager.rollWindowDown.Enabled = false;
-                    MenuManager.turnOffEngine.Enabled = false;
-                    MenuManager.exitVehicle.Enabled = false;
-                }
-                else
-                {
-                    MenuManager.rollWindowDown.Enabled = true;
-                    MenuManager.exitVehicle.Enabled = true;
-                    if (FocusedPed?.Ped && FocusedPed.Ped.CurrentVehicle.Driver == FocusedPed.Ped)
+                    if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "On Foot")
                     {
-                        MenuManager.turnOffEngine.Enabled = true;
+                        action.Action.Enabled = true;
+                    }
+                    else if (FocusedPed.Ped && FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "On Foot")
+                    {
+                        action.Action.Enabled = false;
+                    }
+
+                    if (FocusedPed.Ped && FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "In Vehicle")
+                    {
+                        action.Action.Enabled = true;
+                    }
+                    else if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "In Vehicle")
+                    {
+                        action.Action.Enabled = false;
+                    }
+
+                    if (!action.Action.Enabled)
+                    {
+                        action.Action.HighlightedBackColor = Color.White;
                     }
                     else
                     {
-                        MenuManager.turnOffEngine.Enabled = false;
+                        action.Action.HighlightedBackColor = action.Action.ForeColor;
                     }
                 }
             }
@@ -215,7 +233,7 @@ namespace BetterPedInteractions
 
         private static void MyTerminationHandler(object sender, EventArgs e)
         {
-            VocalInterface.EndSRE();
+            VocalInterface.EndRecognition();
             for(int i = CollectedPeds.Count()-1; i >= 0; i--)
             {
                 CollectedPeds[i].Dismiss();
