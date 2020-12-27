@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
 using Rage;
+using RAGENativeUI;
 using RAGENativeUI.Elements;
 using static BetterPedInteractions.Settings;
 
@@ -10,70 +11,181 @@ namespace BetterPedInteractions
 {
     class ResponseManager
     {
-        private static List<QuestionResponsePair> _questionsAndResponses = new List<QuestionResponsePair>();
+        private static List<ParentCategory> ParentCategories = new List<ParentCategory>();
 
-        internal static void AssignQuestionsAndAnswers(List<QuestionResponsePair> questionsAndResponses)
+        internal static void AssignInteractions(List<ParentCategory> parentCategories)
         {
-            _questionsAndResponses = questionsAndResponses;
+            ParentCategories = parentCategories;
         }
 
-        internal static void GetResponseFromAudio(string question)
+        internal static void FindMatchingPromptFromAudio(string question)
         {
-            var matchingQuestion = _questionsAndResponses.FirstOrDefault(x => x.Question?.Attribute("question").Value == question);
-            Game.LogTrivial($"Matching question: {matchingQuestion.Question.Attribute("question").Value}");
-            ChoosePedResponse(matchingQuestion);
+            var allMenuItems = GetAllMenuItems();
+            MenuItem matchingPrompt = GetMatchingPrompt();
+            if(matchingPrompt == null)
+            {
+                Game.LogTrivial($"No matching prompt found.");
+                return;
+            }
+
+            //Game.LogTrivial($"Matching prompt: {matchingPrompt.MenuPrompt.Value}, Category: {matchingPrompt.Category.Name.Value}");
+            UpdateMenus(matchingPrompt);
+            ChoosePedResponse(matchingPrompt);
+
+            MenuItem GetMatchingPrompt()
+            {
+                var prompt = allMenuItems.First(x => x.MenuPrompt?.Value == question && x.Category.GetType() == typeof(ParentCategory));
+                if (prompt == null)
+                {
+                    prompt = allMenuItems.First(x => x.MenuPrompt?.Value == question && x.Category.GetType() != typeof(ParentCategory));
+                }
+                return prompt != null ? prompt : null;
+            }
         }
 
-        internal static void FindMatchingQuestion(UIMenuListScrollerItem<string> questionCategories, UIMenuItem selectedItem)
+        internal static void FindMatchingPromptFromMenu(UIMenu menu, UIMenuItem selectedItem)
         {
-            var questionResponsePair = _questionsAndResponses.FirstOrDefault(x => x.Question.Attribute("question").Value == selectedItem.Text);
+            //Game.LogTrivial($"Selected item: {selectedItem.Text}");
+            var allMenuItems = GetAllMenuItems();
+            var matchingPrompt = GetMatchingPrompt();
+            if(matchingPrompt == null)
+            {
+                Game.LogTrivial($"No matching prompt found.");
+                return;
+            }
 
-            ChoosePedResponse(questionResponsePair);          
+            //Game.LogTrivial($"Matching prompt: {matchingPrompt.MenuPrompt.Value}, Category: {matchingPrompt.Category.Name.Value}");
+            UpdateMenus(matchingPrompt);
+            ChoosePedResponse(matchingPrompt);
+
+            MenuItem GetMatchingPrompt()
+            {
+                // If the second menu item was not a scroller, then we need to get response from primary category menu items, else we need to get it from subcategory menu items
+                if (menu.MenuItems[1].GetType() != typeof(UIMenuListScrollerItem<string>))
+                {
+                    return allMenuItems.First(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() == typeof(ParentCategory));
+                }
+                else
+                {
+                    return allMenuItems.First(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() != typeof(ParentCategory));
+                }
+            }
         }
 
-        private static void ChoosePedResponse(QuestionResponsePair questionResponsePair)
+        private static void UpdateMenus(MenuItem matchingPrompt)
+        {
+            IncrementCategoryLevel();
+
+            EnableDialoguePathFromPrompt();
+
+            EnableMenuFromPrompt();
+
+            void IncrementCategoryLevel()
+            {
+                if (matchingPrompt.Level == matchingPrompt.Category.Level)
+                {
+                    //Game.LogTrivial($"Category level being incremented: {matchingPrompt.Category.Name.Value}");
+                    //Game.LogTrivial($"Level before: {matchingPrompt.Category.ReadLevel}");
+                    matchingPrompt.Category.Level++;
+                    //Game.LogTrivial($"Level after: {matchingPrompt.Category.ReadLevel}");
+                }
+            }
+
+            void EnableDialoguePathFromPrompt()
+            {
+                if (matchingPrompt.MenuPrompt.Attribute("enablesDialoguePath") != null)
+                {
+                    //Game.LogTrivial($"This prompt should unlock a menu");
+                    // Check for matching main category
+                    var menuItems = GetAllMenuItems();
+                    var menuItemsWithMatchingDialoguePath = menuItems.Where(x => x.MenuPrompt.Attribute("dialoguePath") != null && x.MenuPrompt.Attribute("dialoguePath").Value == matchingPrompt.MenuPrompt.Attribute("enablesDialoguePath").Value);
+
+                    if (menuItemsWithMatchingDialoguePath.Count() > 0)
+                    {
+                        foreach (MenuItem menuItem in menuItemsWithMatchingDialoguePath)
+                        {
+                            menuItem.Enabled = true;
+                        }
+                    }
+                    else
+                    {
+                        Game.LogTrivial($"No matching menu items found with dialogue path: {matchingPrompt.MenuPrompt.Attribute("enablesDialoguePath").Value}");
+                    }
+                }
+            }
+
+            void EnableMenuFromPrompt()
+            {
+                if (matchingPrompt.MenuPrompt.Attribute("enablesCategory") != null)
+                {
+                    //Game.LogTrivial($"This prompt should unlock a menu");
+                    // Check for matching main category
+                    var matchingCategoryToEnable = ParentCategories.FirstOrDefault(x => x.Name.Value == matchingPrompt.MenuPrompt.Attribute("enablesCategory").Value);
+
+                    // Check for matching sub category
+                    if (matchingCategoryToEnable != null)
+                    {
+                        matchingCategoryToEnable.Enabled = true;
+                    }
+                    else
+                    {
+                        var matchingSubCategoryToEnable = ParentCategories.SelectMany(x => x.SubCategories).FirstOrDefault(x => x.Name.Value == matchingPrompt.MenuPrompt.Attribute("enablesCategory").Value);
+                        if (matchingSubCategoryToEnable != null)
+                        {
+                            matchingSubCategoryToEnable.Enabled = true;
+                        }
+                        else
+                        {
+                            Game.LogTrivial($"No matching category found: {matchingPrompt.MenuPrompt.Attribute("enablesCategory").Value}");
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void ChoosePedResponse(MenuItem prompt)
         {
             var focusedPed = EntryPoint.FocusedPed;
             Game.LogTrivial($"Focused ped: {focusedPed.Ped.Model.Name}");
             XElement response = null;
 
-            // If the question was already asked, the ped needs to repeat themselves instead of assigning a new response
-            if (focusedPed.UsedQuestions.ContainsKey(questionResponsePair.Question))
-            {
-                response = focusedPed.UsedQuestions[questionResponsePair.Question];
-            }
-            // Assign a response (75% chance to match previous response truth/lie attribute) and add it to _usedResponses
-            // If this is the ped's first response OR if this is not the first response and they meet the 25% chance requirement to divert from their initial response type, choose a random response
-            else if (focusedPed.ResponseType == ResponseType.Unspecified || (focusedPed.ResponseType != ResponseType.Unspecified && GetResponseChance() == 3))
-            {
-                response = questionResponsePair.Responses[GetRandomResponseValue()];
-            }
-            // If this is not the ped's first response, choose a response that matches their initial response's type
-            else if (focusedPed.ResponseType != ResponseType.Unspecified && GetResponseChance() < 3)
-            {
-                response = questionResponsePair.Responses.FirstOrDefault(x => x.Attributes().Count() > 0 && x.Attribute("type").Value.ToLower() == focusedPed.ResponseType.ToString().ToLower());
-            }
-
-            // Save the type of response given (truth/lie)
-            if (response.HasAttributes)
-            {
-                var responseAttributes = response.Attributes();
-                foreach (XAttribute attribute in responseAttributes)
-                {
-                    attribute.Value[0].ToString().ToUpper();
-                    Game.LogTrivial($"Response attribute: {attribute.Value}");
-                    if (Enum.TryParse(attribute.Value, out ResponseType responseType))
-                    {
-                        focusedPed.ResponseType = responseType;
-                    }
-                }
-            }
-
+            GetResponse();
+            SetPedResponseHonesty();
+            EnableCategory();
+            EnableDialoguePath();
             DisplayResponse();
             AddQuestionResponsePairToUsedBank();
             if (focusedPed.Group == Settings.Group.Civilian && EnableAgitation)
             {
                 AdjustPedAgitation();
+            }
+
+            void GetResponse()
+            {
+                // If the question was already asked, the ped needs to repeat themselves instead of assigning a new response
+                if (focusedPed.UsedQuestions.ContainsKey(prompt.MenuPrompt))
+                {
+                    Game.LogTrivial($"Repeated question");
+                    response = focusedPed.UsedQuestions[prompt.MenuPrompt];
+                }
+                // Assign a response (75% chance to match previous response truth/lie attribute) and add it to _usedResponses
+                // If this is the ped's first response OR if this is not the first response and they meet the 25% chance requirement to divert from their initial response type, choose a random response
+                else if (focusedPed.ResponseHonesty == ResponseHonesty.Unspecified || (focusedPed.ResponseHonesty != ResponseHonesty.Unspecified && GetResponseChance() == 3))
+                {
+                    Game.LogTrivial($"First, deviated, or unspecified honesty response");
+                    response = prompt.Responses[GetRandomResponseValue()];
+                }
+                // If this is not the ped's first response, choose a response that matches their initial response's type
+                else if (focusedPed.ResponseHonesty != ResponseHonesty.Unspecified && GetResponseChance() < 3)
+                {
+                    Game.LogTrivial($"Follow-up response");
+                    // Response is null when the ped's ResponseHonesty is defined, but there are no responses without a honesty attribute
+                    response = prompt.Responses.FirstOrDefault(x => x.Attribute("honesty")?.Value.ToLower() == focusedPed.ResponseHonesty.ToString().ToLower());
+                    if (response == null)
+                    {
+                        response = prompt.Responses[GetRandomResponseValue()];
+                    }
+                }
             }
 
             int GetResponseChance()
@@ -84,7 +196,93 @@ namespace BetterPedInteractions
             int GetRandomResponseValue()
             {
                 Random r = new Random();
-                return r.Next(questionResponsePair.Responses.Count);
+                return r.Next(prompt.Responses.Count);
+            }
+
+            void SetPedResponseHonesty()
+            {
+                if (response.Attribute("honesty") != null)
+                {
+                    var honestyAttribute = response.Attribute("honesty").Value;
+                    //Game.LogTrivial($"Response type: {honestyAttribute}");
+                    honestyAttribute = char.ToUpper(honestyAttribute[0]) + honestyAttribute.Substring(1);
+                    //Game.LogTrivial($"Response type after char.ToUpper: {honestyAttribute}");
+                    var parsed = Enum.TryParse(honestyAttribute, out ResponseHonesty responseHonesty);
+                    //Game.LogTrivial($"Response type parsed: {parsed}, Response type: {responseHonesty}");
+                    if (parsed)
+                    {
+                        focusedPed.ResponseHonesty = responseHonesty;
+                    }
+                }
+            }
+
+            void EnableDialoguePath()
+            {
+                var newDialogueOptions = new List<MenuItem>();
+                if (response.Attribute("enablesDialoguePath") != null)
+                {
+                    Game.LogTrivial($"Enabling dialogue path {response.Attribute("enablesDialoguePath").Value}");
+                    var allMenuItems = GetAllMenuItems();
+                    //Game.LogTrivial($"All menu items: {allMenuItems.Count()}");
+                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => x.Element.Attribute("dialoguePath") != null && (x.Element.Attribute("dialoguePath").Value == response.Attribute("enablesDialoguePath").Value || x.Element.Attribute("dialoguePath").Value == prompt.MenuPrompt.Attribute("enablesDialoguePath").Value));
+                    //Game.LogTrivial($"To be enabled: {itemsWithPathToBeEnabled.Count()}");
+                    foreach (MenuItem menuItem in itemsWithPathToBeEnabled)
+                    {
+                        Game.LogTrivial($"Enabling {menuItem.MenuPrompt.Value}");
+                        newDialogueOptions.Add(menuItem);
+                        menuItem.Enabled = true;
+                    }
+                }
+                else if (prompt.Element.Attribute("enablesDialoguePath") != null)
+                {
+                    Game.LogTrivial($"Enabling dialogue path {prompt.Element.Attribute("enablesDialoguePath").Value}");
+                    var allMenuItems = GetAllMenuItems();
+                    //Game.LogTrivial($"All menu items: {allMenuItems.Count()}");
+                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => x.Element.Attribute("dialoguePath") != null &&  x.Element.Attribute("dialoguePath").Value == prompt.Element.Attribute("enablesDialoguePath").Value);
+                    //Game.LogTrivial($"To be enabled: {itemsWithPathToBeEnabled.Count()}");
+
+                    foreach (MenuItem menuItem in itemsWithPathToBeEnabled)
+                    {
+                        Game.LogTrivial($"Enabling {menuItem.MenuPrompt.Value}");
+                        newDialogueOptions.Add(menuItem);
+                        menuItem.Enabled = true;
+                    }
+                }
+
+                NotifyPlayerOfNewDialoguePathOptions(newDialogueOptions);
+            }
+
+            void NotifyPlayerOfNewDialoguePathOptions(List<MenuItem> newDialogueOptions)
+            {
+                var updatedCategories = newDialogueOptions.Select(x => x.Category.Name.Value).Distinct();
+                string updatedCategoriesString = "";
+                foreach (string category in updatedCategories)
+                {
+                    updatedCategoriesString += $"~b~{category}~w~, ";
+                }
+                if(updatedCategoriesString != "")
+                {
+                    updatedCategoriesString.Trim(' ', ',');
+                    Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nNew dialogue options unlocked in category: {updatedCategoriesString.Trim(' ', ',')}.");
+                }
+            }
+
+            void EnableCategory()
+            {
+                if (prompt.Element.Attribute("enablesCategory") != null)
+                {
+                    var allMenuItems = GetAllMenuItems();
+                    var categoriesToBeEnabled = allMenuItems.Where(x => x.Category.Name.Value == prompt.Element.Attribute("enablesCategory").Value && x.Category.File == prompt.Category.File).Select(y => y.Category).Distinct();
+                    //Game.LogTrivial($"Categories to be enabled: {categoriesToBeEnabled.Count()}");
+                    foreach(Category category in categoriesToBeEnabled)
+                    {
+                        //Game.LogTrivial($"Category: {category.Name.Value}, File: {category.File}");
+                        category.Enabled = true;
+                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nCategory unlocked with new dialogue options: ~b~{category.Name.Value}~w~.");
+                    }
+
+
+                }
             }
 
             void DisplayResponse()
@@ -92,7 +290,7 @@ namespace BetterPedInteractions
 
                 if (!focusedPed.StoppedTalking)
                 {
-                    if (focusedPed.UsedQuestions.ContainsKey(questionResponsePair.Question))
+                    if (focusedPed.UsedQuestions.ContainsKey(prompt.MenuPrompt))
                     {
                         RepeatResponse();
                     }
@@ -110,25 +308,11 @@ namespace BetterPedInteractions
                     PlayLipAnimation();
                     return;
                 }
-
-                //if (focusedPed.Group == Settings.Group.Cop)
-                //{
-                //    if (focusedPed.UsedQuestions.ContainsKey(questionResponsePair.Question))
-                //    {
-                //        RepeatResponse();
-                //    }
-                //    else
-                //    {
-                //        Game.DisplaySubtitle($"~y~Officer: ~w~{response.Value}");
-                //    }
-                //    PlayLipAnimation();
-                //    return;
-                //}
             }
 
             void RepeatResponse()
             {
-                var repeatedResponse = focusedPed.UsedQuestions[questionResponsePair.Question].Value.ToLower();
+                var repeatedResponse = focusedPed.UsedQuestions[prompt.MenuPrompt].Value.ToLower();
                 Game.LogTrivial($"This response was already used");
 
                 if (new Random().Next(2) == 1)
@@ -186,26 +370,36 @@ namespace BetterPedInteractions
             void AddQuestionResponsePairToUsedBank()
             {
                 // Add the question and response pair to a list of already-asked questions.
-                if (!focusedPed.UsedQuestions.ContainsKey(questionResponsePair.Question))
+                if (!focusedPed.UsedQuestions.ContainsKey(prompt.MenuPrompt))
                 {
-                    focusedPed.UsedQuestions.Add(questionResponsePair.Question, response);
+                    focusedPed.UsedQuestions.Add(prompt.MenuPrompt, response);
                 }
             }
 
             void AdjustPedAgitation()
             {
-                if (questionResponsePair.Question.Attributes().Any(x => x.Name == "type"))
+                if (prompt.MenuPrompt.Attributes().Any(x => x.Name == "type"))
                 {
-                    if (questionResponsePair.Question.Attribute("type").Value == "interview")
+                    if (prompt.MenuPrompt.Attribute("type").Value == "interview")
                     {
                         focusedPed.DecreaseAgitation();
                     }
-                    else if (questionResponsePair.Question.Attribute("type").Value == "interrogation")
+                    else if (prompt.MenuPrompt.Attribute("type").Value == "interrogation")
                     {
                         focusedPed.IncreaseAgitation();
                     }
                 }
             }
+        }
+
+        private static List<MenuItem> GetAllMenuItems()
+        {
+            var allMenuItems = ParentCategories.SelectMany(x => x.MenuItems).ToList();
+            var subCategories = ParentCategories.SelectMany(x => x.SubCategories);
+            var subCategoryMenuItems = subCategories.SelectMany(x => x.MenuItems).ToList();
+            allMenuItems.AddRange(subCategoryMenuItems);
+            //Game.LogTrivial($"Menu items: {allMenuItems.Count()}");
+            return allMenuItems;
         }
     }
 }
