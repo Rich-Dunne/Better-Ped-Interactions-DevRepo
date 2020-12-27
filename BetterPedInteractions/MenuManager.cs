@@ -11,35 +11,38 @@ namespace BetterPedInteractions
 {
     class MenuManager
     {
-        internal static MenuPool menuPool = new MenuPool();
+        internal static MenuPool MenuPool = new MenuPool();
         private static UIMenu _civMenu, _copMenu;
-        internal static UIMenuItem questionItem, rollWindowDown, exitVehicle, turnOffEngine;
-        private static UIMenuItem _dismiss = new UIMenuItem("Dismiss ped", "Dismisses the focused ped.");
-        private static UIMenuCheckboxItem _followMe = new UIMenuCheckboxItem("Follow me", false, "Makes the ped follow the player");
-        private static UIMenuListScrollerItem<string> _civQuestionCategoryScroller, _copQuestionCategoryScroller, _subMenuScroller;
-        private static List<QuestionResponsePair> _questionAnswerPairs;
+        private static UIMenuItem _DialogueItem, _RollWindowDown, _ExitVehicle, _TurnOffEngine;
+        internal static List<MenuItem> Actions = new List<MenuItem>();
+        private static UIMenuItem _Dismiss = new UIMenuItem("Dismiss ped", "Dismisses the focused ped.");
+        private static UIMenuCheckboxItem _FollowMe = new UIMenuCheckboxItem("Follow me", false, "Makes the ped follow the player");
+        internal static UIMenuListScrollerItem<string> CivParentCategoryScroller, CopParentCategoryScroller;
+        private static List<string> _subCategoryNames = new List<string>();
+        private static UIMenuListScrollerItem<string> _subMenuScroller = new UIMenuListScrollerItem<string>("Sub Category","", _subCategoryNames);
+        private static List<ParentCategory> _parentCategories;
         private static int _savedSubMenuIndex = 0;
 
-        internal static void BuildMenus(List<QuestionResponsePair> questionAnswerPairs)
+        internal static void BuildMenus(List<ParentCategory> menuCategoryObjects)
         {
-            _questionAnswerPairs = questionAnswerPairs;
-            Game.LogTrivial($"QuestionAnswerPairs count: {_questionAnswerPairs.Count}");
-            Game.LogTrivial($"CIV QAPairs: {_questionAnswerPairs.Where(x => x.Group == Settings.Group.Civilian).Count()}");
-            ResponseManager.AssignQuestionsAndAnswers(_questionAnswerPairs);
+            _parentCategories = menuCategoryObjects;
+            ResponseManager.AssignInteractions(_parentCategories);
 
+            // Currently, scrolling a menu removes current menu items, then re-adds ones with matching category properties
             BuildCivMenu();
             BuildCopMenu();
 
             void BuildCivMenu()
             {
                 _civMenu = new UIMenu("Civilian Interaction Menu", "");
-                menuPool.Add(_civMenu);
+                MenuPool.Add(_civMenu);
 
-                var civCategories = _questionAnswerPairs.Where(x => x.Group == Settings.Group.Civilian).Select(y => y.Category.Value).Distinct().ToList();
-                _civMenu.AddItem(_civQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civCategories));
+                var civCategories = _parentCategories.Where(x => x.Menu == Settings.Group.Civilian).Select(x => x.Name).Distinct().ToList();
+                var civCategoriesList = civCategories.Select(x => x.Value).ToList();
+                //Game.LogTrivial($"Civ Categories: {civCategories.Count()}");
+                _civMenu.AddItem(CivParentCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civCategoriesList));
 
-                PopulateMenu(_civMenu, _civQuestionCategoryScroller);
-                SetMenuWidth(_civMenu);
+                PopulateMenu(_civMenu, CivParentCategoryScroller);
                 _civMenu.RefreshIndex();
 
                 _civMenu.MouseControlsEnabled = false;
@@ -49,13 +52,14 @@ namespace BetterPedInteractions
                 _civMenu.OnItemSelect += CivInteract_OnItemSelected;
                 _civMenu.OnScrollerChange += Menu_OnScrollerChanged;
 
-                void CivInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
+                void CivInteract_OnCheckboxChanged(UIMenu menu, UIMenuCheckboxItem checkboxItem, bool @checked)
                 {
+                    Game.LogTrivial($"Checkbox item toggled");
                     var focusedPed = EntryPoint.FocusedPed;
 
-                    if (checkboxItem == _followMe)
+                    if (checkboxItem == _FollowMe)
                     {
-                        if (_followMe.Checked)
+                        if (_FollowMe.Checked)
                         {
                             focusedPed.FollowMe();
                         }
@@ -66,31 +70,31 @@ namespace BetterPedInteractions
                     }
                 }
 
-                void CivInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
+                void CivInteract_OnItemSelected(UIMenu menu, UIMenuItem selectedItem, int index)
                 {
                     var focusedPed = EntryPoint.FocusedPed;
 
-                    if (selectedItem == _dismiss)
+                    if (selectedItem == _Dismiss)
                     {
                         focusedPed.Dismiss();
-                        sender.Close();
+                        menu.Close();
                         Game.LogTrivial($"Dismiss");
                         return;
                     }
 
-                    if (selectedItem == rollWindowDown && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
+                    if (selectedItem == _RollWindowDown && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
                     {
                         focusedPed.RollDownWindow();
                         return;
                     }
 
-                    if (selectedItem == exitVehicle && focusedPed.Ped.CurrentVehicle)
+                    if (selectedItem == _ExitVehicle && focusedPed.Ped.CurrentVehicle)
                     {
                         focusedPed.ExitVehicle();
                         return;
                     }
 
-                    if (selectedItem == turnOffEngine && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
+                    if (selectedItem == _TurnOffEngine && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.Driver == focusedPed.Ped)
                     {
                         focusedPed.TurnOffEngine();
                         return;
@@ -98,7 +102,8 @@ namespace BetterPedInteractions
 
                     if (selectedItem.GetType() != typeof(UIMenuListScrollerItem<string>) && selectedItem.GetType() != typeof(UIMenuCheckboxItem))
                     {
-                        ResponseManager.FindMatchingQuestion(_civQuestionCategoryScroller, selectedItem);
+                        ResponseManager.FindMatchingPromptFromMenu(menu, selectedItem);
+                        PopulateMenu(menu, CivParentCategoryScroller);
                         return;
                     }
                 }
@@ -107,12 +112,14 @@ namespace BetterPedInteractions
             void BuildCopMenu()
             {
                 _copMenu = new UIMenu("Cop Interaction Menu", "");
-                menuPool.Add(_copMenu);
+                MenuPool.Add(_copMenu);
 
-                var copCategories = _questionAnswerPairs.Where(x => x.Group == Settings.Group.Cop).Select(y => y.Category.Value).Distinct().ToList();
-                _copMenu.AddItem(_copQuestionCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", copCategories));
+                var copCategories = _parentCategories.Where(x => x.Menu == Settings.Group.Cop).Select(x => x.Name).Distinct().ToList();
+                //var copSubCategories = _menuCategoryObjects.SelectMany(x => x.SubCategories.Where(y => y.ParentCategory.Menu == Settings.Group.Cop));
+                var civCategoriesList = copCategories.Select(x => x.Value).ToList();
+                _copMenu.AddItem(CopParentCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civCategoriesList));
 
-                PopulateMenu(_copMenu, _copQuestionCategoryScroller);
+                PopulateMenu(_copMenu, CopParentCategoryScroller);
                 SetMenuWidth(_copMenu);
                 _copMenu.RefreshIndex();
 
@@ -123,13 +130,13 @@ namespace BetterPedInteractions
                 _copMenu.OnItemSelect += CopInteract_OnItemSelected;
                 _copMenu.OnScrollerChange += Menu_OnScrollerChanged;
 
-                void CopInteract_OnCheckboxChanged(UIMenu sender, UIMenuCheckboxItem checkboxItem, bool @checked)
+                void CopInteract_OnCheckboxChanged(UIMenu menu, UIMenuCheckboxItem checkboxItem, bool @checked)
                 {
                     var focusedPed = EntryPoint.FocusedPed;
 
-                    if (checkboxItem == _followMe)
+                    if (checkboxItem == _FollowMe)
                     {
-                        if (_followMe.Checked)
+                        if (_FollowMe.Checked)
                         {
                             focusedPed.FollowMe();
                         }
@@ -140,227 +147,341 @@ namespace BetterPedInteractions
                     }
                 }
 
-                void CopInteract_OnItemSelected(UIMenu sender, UIMenuItem selectedItem, int index)
+                void CopInteract_OnItemSelected(UIMenu menu, UIMenuItem selectedItem, int index)
                 {
                     var focusedPed = EntryPoint.FocusedPed;
 
-                    if (selectedItem == _dismiss)
+                    if (selectedItem == _Dismiss)
                     {
                         focusedPed.Dismiss();
-                        sender.Close();
+                        menu.Close();
                         return;
                     }
 
                     if (selectedItem.GetType() != typeof(UIMenuListScrollerItem<string>) && selectedItem.GetType() != typeof(UIMenuCheckboxItem))
                     {
-                        ResponseManager.FindMatchingQuestion(_copQuestionCategoryScroller, selectedItem);
+                        ResponseManager.FindMatchingPromptFromMenu(menu, selectedItem);
+                        PopulateMenu(menu, CopParentCategoryScroller);
                         return;
                     }
                 }
             }
         }
 
-        private static void PopulateMenu(UIMenu menu, UIMenuListScrollerItem<string> categoryScroller)
+        internal static void PopulateMenu(UIMenu menu, UIMenuListScrollerItem<string> categoryScroller, int removeItemIndex = 1)
         {
-            var currentCategory = _questionAnswerPairs.FirstOrDefault(x => x.Category.Value == categoryScroller.SelectedItem).Category;
+            // First I need to clear the menu because this method will be used for refreshing menu items
+            while (menu.MenuItems.Count > removeItemIndex)
+            {
+                menu.RemoveItemAt(removeItemIndex);
+            }
+
+            // Next, I need to get the current parent category
+            var parentCategory = _parentCategories.FirstOrDefault(x => x.Name.Value == categoryScroller.SelectedItem);
+            if (parentCategory == null)
+            {
+                Game.LogTrivial($"Parent category is null.");
+                return;
+            }
+            //Game.LogTrivial($"Parent category: {parentCategory.Name.Value}");
+            // Then, I need to check if the parent category has sub categories
+            // If there are any sub categories, I need to add their names to the submenu scroller menu item
+            var subCategories = parentCategory.SubCategories;
+            if(subCategories.Count > 0 && menu.MenuItems.Count == 1)
+            {
+                CreateSubCategoryScroller();
+            }
+
+            // Next, I need to populate the menu with prompts which either match the currently selected sub category, or the currently selected parent category
             if (categoryScroller.SelectedItem == "Ped Actions")
             {
                 AddPedActionsToMenu();
             }
             else
             {
-                GenerateSubMenuScrollerItem(currentCategory);
-                foreach (QuestionResponsePair QAPair in _questionAnswerPairs.Where(x => x.Category.Value == categoryScroller.SelectedItem))
+                IEnumerable<MenuItem> promptsMatchingReadLevel;
+
+                if (menu.MenuItems.Count > 1 && subCategories.Count > 0 && _subMenuScroller.OptionCount > 0)
                 {
-                    AddQuestionsToMenu(QAPair);
+                    //Game.LogTrivial($"Subscroller selected item: {_subMenuScroller.SelectedItem}");
+                    var matchingSubCategory = subCategories.FirstOrDefault(x => _subMenuScroller.SelectedItem == x.Name.Value);
+                    //Game.LogTrivial($"Possible prompts: {promptsMatchingReadLevel.Count()}");
+                    if (matchingSubCategory == null)
+                    {
+                        Game.LogTrivial($"Matching sub category is null.");
+                        return;
+                    }
+                    promptsMatchingReadLevel = matchingSubCategory.MenuItems.Where(x => x.Level <= matchingSubCategory.Level);
+                }
+                else
+                {
+                    promptsMatchingReadLevel = parentCategory.MenuItems.Where(x => x.Level <= parentCategory.Level);
+                }
+
+                foreach (MenuItem menuItem in promptsMatchingReadLevel.Where(x => x.Enabled && x.MenuPrompt != null))
+                {
+                    if (EntryPoint.FocusedPed == null || (EntryPoint.FocusedPed != null && !EntryPoint.FocusedPed.UsedQuestions.ContainsKey(menuItem.MenuPrompt)))
+                    {
+                        //Game.LogTrivial($"[MENU ADD] Menu: {menuCategoryObject.Menu}, Category: {menuCategoryObject.Name.Value}, Prompt: {menuItem.MenuPrompt.Value}");
+                        menu.AddItem(_DialogueItem = new UIMenuItem(menuItem.MenuPrompt.Value));
+                        //_DialogueItem.HighlightedBackColor = _DialogueItem.ForeColor;
+                        AssignFontColorFromAttribute(menuItem, _DialogueItem);
+                    }
                 }
             }
+            
 
+            SetMenuWidth(menu);
 
             void AddPedActionsToMenu()
             {
-                if (menu.TitleText.Contains("Civilian"))
+                IEnumerable<MenuItem> matchingPrompts;
+                if (menu.MenuItems.Count > 1 && subCategories.Count > 0 && _subMenuScroller.OptionCount > 0)
                 {
-                    menu.AddItem(rollWindowDown = new UIMenuItem("Roll down window", "Rolls down the ped's window"));
-                    rollWindowDown.ForeColor = Color.Gold;
-                    menu.AddItem(turnOffEngine = new UIMenuItem("Turn engine off", "Makes ped turn off the engine"));
-                    turnOffEngine.ForeColor = Color.Gold;
-                    menu.AddItem(exitVehicle = new UIMenuItem("Exit vehicle", "Makes ped exit the vehicle"));
-                    exitVehicle.ForeColor = Color.Gold;
+                    //Game.LogTrivial($"Subscroller selected item: {_subMenuScroller.SelectedItem}");
+                    var matchingSubCategory = subCategories.FirstOrDefault(x => _subMenuScroller.SelectedItem == x.Name.Value);
+                    //Game.LogTrivial($"Possible prompts: {promptsMatchingReadLevel.Count()}");
+                    if (matchingSubCategory == null)
+                    {
+                        Game.LogTrivial($"Matching sub category is null.");
+                        return;
+                    }
+                    matchingPrompts = matchingSubCategory.MenuItems.Where(x => x.MenuPrompt.Attribute("action") != null);
                 }
-                menu.AddItem(_followMe);
-                _followMe.ForeColor = Color.Gold;
-                menu.AddItem(_dismiss);
-                _dismiss.ForeColor = Color.Gold;
-            }
-
-            void GenerateSubMenuScrollerItem(XAttribute category)
-            {
-                var categoryHasSubMenus = category.Parent.Elements().Any(x => x.Name == "SubMenu");
-                //Game.LogTrivial($"Category has submenus: {categoryHasSubMenus}");
-                if (!categoryHasSubMenus)
+                else
                 {
-                    return;
+                    matchingPrompts = parentCategory.MenuItems.Where(x => x.MenuPrompt.Attribute("action") != null);
                 }
 
-                var subMenus = category.Parent.Elements().Where(x => x.Name == "SubMenu").ToList();
-                //Game.LogTrivial($"submenus: {subMenus.Count()}");
-
-                var subMenuCategories = new List<string>();
-                if (subMenus.Count() > 0)
+                foreach (MenuItem menuItem in matchingPrompts)
                 {
-                    foreach (XElement subMenu in subMenus)
+                    if(menuItem.MenuPrompt.Attribute("action").Value == "follow")
                     {
-                        //Game.LogTrivial($"subMenu Value: {subMenu.FirstAttribute.Value}");
-                        subMenuCategories.Add(subMenu.FirstAttribute.Value);
+                        menu.AddItem(_FollowMe);
+                        menuItem.Action = _FollowMe;
+                        Actions.Add(menuItem);
                     }
-                }
-                if (categoryHasSubMenus && subMenus.Count() > 0 && menu.MenuItems.Count == 1)
-                {
-                    menu.AddItem(_subMenuScroller = new UIMenuListScrollerItem<string>("Sub Category", "", subMenuCategories), 1);
-                    _subMenuScroller.ForeColor = Color.SkyBlue;
-                    if(_savedSubMenuIndex < _subMenuScroller.OptionCount)
+                    if(menuItem.MenuPrompt.Attribute("action").Value == "dismiss")
                     {
-                        _subMenuScroller.Index = _savedSubMenuIndex;
+                        menu.AddItem(_Dismiss);
+                        menuItem.Action = _Dismiss;
+                        Actions.Add(menuItem);
                     }
-                    else
+                    if (menuItem.MenuPrompt.Attribute("action").Value == "rollWindowDown")
                     {
-                        _subMenuScroller.Index = 0;
+                        _RollWindowDown = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Rolls down the ped's window");
+                        menu.AddItem(_RollWindowDown);
+                        menuItem.Action = _RollWindowDown;
+                        Actions.Add(menuItem);
                     }
-
-                }
-            }
-
-            void AddQuestionsToMenu(QuestionResponsePair QAPair)
-            {
-                //Game.LogTrivial($"Question: {QAPair.Question.Attribute("question").Value}");
-                var questionHasSubMenu = QAPair.Question.Attributes().Any(x => x.Name == "submenu");
-                //Game.LogTrivial($"Question has submenu: {questionHasSubMenu}");
-                var subMenu = QAPair.Question.Attributes().Where(x => x.Name == "submenu").FirstOrDefault();
-
-                if (questionHasSubMenu)
-                {
-                    if (_subMenuScroller.SelectedItem == subMenu.Value && ((QAPair.Group == Settings.Group.Civilian && menu.TitleText.Contains("Civilian")) || (QAPair.Group == Settings.Group.Cop && menu.TitleText.Contains("Cop"))))
+                    if(menuItem.MenuPrompt.Attribute("action").Value == "turnOffEngine")
                     {
-                        AddSubMenuItems(QAPair);
+                        _TurnOffEngine = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Makes ped turn off the engine");
+                        menu.AddItem(_TurnOffEngine);
+                        menuItem.Action = _TurnOffEngine;
+                        Actions.Add(menuItem);
                     }
-
-                }
-                else if (!questionHasSubMenu && (menu.MenuItems.Count == 1 || menu.MenuItems.Count > 1 && menu.MenuItems[1].Text != "Sub Category"))
-                {
-                    if ((QAPair.Group == Settings.Group.Civilian && menu.TitleText.Contains("Civilian")) || (QAPair.Group == Settings.Group.Cop && menu.TitleText.Contains("Cop")))
+                    if (menuItem.MenuPrompt.Attribute("action").Value == "exitVehicle")
                     {
-                        menu.AddItem(questionItem = new UIMenuItem(QAPair.Question.Attribute("question").Value));
+                        _ExitVehicle = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Makes ped exit the vehicle");
+                        menu.AddItem(_ExitVehicle);
+                        menuItem.Action = _ExitVehicle;
+                        Actions.Add(menuItem);
                     }
+                    AssignFontColorFromAttribute(menuItem, menuItem.Action);
                 }
             }
 
-            void AddSubMenuItems(QuestionResponsePair questionResponsePair)
+            void CreateSubCategoryScroller()
             {
-                menu.AddItem(questionItem = new UIMenuItem(questionResponsePair.Question.Attribute("question").Value));
-                var attribute = questionResponsePair.Question.Attributes().Where(x => x.Name == "type").FirstOrDefault();
-                if (attribute != null)
+                _subCategoryNames.Clear();
+                _subCategoryNames = subCategories.Where(x => x.Enabled && x.MenuItems.Any(y => y.Enabled)).Select(z => z.Name.Value).ToList();
+                _subMenuScroller.Items.Clear();
+                _subMenuScroller.Items = _subCategoryNames;
+                menu.AddItem(_subMenuScroller, 1);
+                _subMenuScroller.ForeColor = Color.SkyBlue;
+                _subMenuScroller.HighlightedBackColor = Color.SkyBlue;
+                if (_savedSubMenuIndex < _subMenuScroller.OptionCount)
+                {
+                    _subMenuScroller.Index = _savedSubMenuIndex;
+                }
+                else
+                {
+                    _subMenuScroller.Index = 0;
+                }
+            }
+
+            void AssignFontColorFromAttribute(MenuItem menuItem, UIMenuItem uiMenuItem)
+            {
+                var attribute = menuItem.MenuPrompt.Attribute("type");
+                if (menuItem.MenuPrompt.Attribute("type") != null)
                 {
                     if (attribute.Value.ToLower() == "interview")
                     {
-                        questionItem.ForeColor = Color.LimeGreen;
+                        uiMenuItem.ForeColor = Color.LimeGreen;
                     }
                     else if (attribute.Value.ToLower() == "interrogation")
                     {
-                        questionItem.ForeColor = Color.IndianRed;
-                    }
-                    else if (attribute.Value.ToLower() == "action")
-                    {
-                        questionItem.ForeColor = Color.Gold;
+                        uiMenuItem.ForeColor = Color.IndianRed;
                     }
                 }
-            }
-        }
-
-        private static void SetMenuWidth(UIMenu menu)
-        {
-            float width = 0.25f;
-
-            _civQuestionCategoryScroller.TextStyle.Apply();
-            Rage.Native.NativeFunction.Natives.x54CE8AC98E120CAB("STRING"); // _BEGIN_TEXT_COMMAND_GET_WIDTH
-            if (menu.TitleText == "Civilian Interaction Menu")
-            {
-                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(_civQuestionCategoryScroller.SelectedItem);
-            }
-            else if (menu.TitleText == "Cop Interaction Menu")
-            {
-                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(_copQuestionCategoryScroller.SelectedItem);
-            }
-            float scrollerTextWidth = Rage.Native.NativeFunction.Natives.x85F061DA64ED2F67<float>(true); // _END_TEXT_COMMAND_GET_WIDTH
-            float padding = 0.00390625f * 2; // typical padding used in RNUI
-
-            var scrollerItemWidth = scrollerTextWidth + padding;
-            //Game.LogTrivial($"Scroller item width: {scrollerItemWidth}");
-
-            foreach (var menuItem in menu.MenuItems)
-            {
-                menuItem.TextStyle.Apply();
-                Rage.Native.NativeFunction.Natives.x54CE8AC98E120CAB("STRING"); // _BEGIN_TEXT_COMMAND_GET_WIDTH
-                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(menuItem.Text);
-                float textWidth = Rage.Native.NativeFunction.Natives.x85F061DA64ED2F67<float>(true); // _END_TEXT_COMMAND_GET_WIDTH
-
-                var newWidth = Math.Max(textWidth + padding, UIMenu.DefaultWidth);
-                //Game.LogTrivial($"Menu item width: {newWidth}");
-
-                // Minimum width is set to prevent the scroller from clipping the menu item name
-                if (newWidth < 0.25)
+                if (menuItem.MenuPrompt.Attribute("action") != null)
                 {
-                    newWidth = 0.25f;
+                    uiMenuItem.ForeColor = Color.Gold;
                 }
-                if (newWidth > width)
+                if (menuItem.Enabled)
                 {
-                    width = newWidth;
-                }
-                if (scrollerItemWidth > 0.16)
-                {
-                    width += 0.02f;
+                    uiMenuItem.HighlightedBackColor = uiMenuItem.ForeColor;
                 }
             }
-            menu.Width = width;
         }
     
-        private static void Menu_OnScrollerChanged(UIMenu sender, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
+        private static void Menu_OnScrollerChanged(UIMenu menu, UIMenuScrollerItem scroller, int prevIndex, int newIndex)
         {
-            if (scroller == _copQuestionCategoryScroller || scroller == _civQuestionCategoryScroller)
+            var categoryScroller = (UIMenuListScrollerItem<string>)menu.MenuItems[0];
+            AssignScrollerCategory();
+
+            if (scroller == CopParentCategoryScroller || scroller == CivParentCategoryScroller)
             {
-                ScrollQuestionCategory();
+                ScrollParentCategory();
             }
 
-            if (scroller == _subMenuScroller)
+            if(scroller == menu.MenuItems[1])
             {
                 ScrollSubMenu();
             }
+            SetMenuWidth(menu);
 
-            if (sender.TitleText.Contains("Civilian"))
+            void AssignScrollerCategory()
             {
-                PopulateMenu(sender, _civQuestionCategoryScroller);
-            }
-            else if (sender.TitleText.Contains("Cop"))
-            {
-                PopulateMenu(sender, _copQuestionCategoryScroller);
-            }
-            SetMenuWidth(sender);
-
-            void ScrollQuestionCategory()
-            {
-                while (sender.MenuItems.Count > 1)
+                if (scroller == CopParentCategoryScroller)
                 {
-                    sender.RemoveItemAt(1);
+                    categoryScroller = CopParentCategoryScroller;
+                }
+                else if (scroller == CivParentCategoryScroller)
+                {
+                    categoryScroller = CivParentCategoryScroller;
+                }
+            }
+
+            void ScrollParentCategory()
+            {
+                while (menu.MenuItems.Count > 1)
+                {
+                    menu.RemoveItemAt(1);
+                }
+
+                if (menu.TitleText.Contains("Civilian"))
+                {
+                    PopulateMenu(menu, CivParentCategoryScroller);
+                }
+                else if (menu.TitleText.Contains("Cop"))
+                {
+                    PopulateMenu(menu, CopParentCategoryScroller);
                 }
             }
 
             void ScrollSubMenu()
             {
                 _savedSubMenuIndex = _subMenuScroller.Index;
-                while (sender.MenuItems.Count > 2)
+                while (menu.MenuItems.Count > 2)
                 {
-                    sender.RemoveItemAt(2);
+                    menu.RemoveItemAt(2);
                 }
+
+                var parentCategory = _parentCategories.FirstOrDefault(x => x.Name.Value == categoryScroller.OptionText);
+                if (MatchingMenuOpen(menu, parentCategory))
+                {
+                    PopulateMenu(menu, categoryScroller, 2);
+                }
+            }
+        }
+
+        private static void SetMenuWidth(UIMenu menu)
+        {
+            float MINIMUM_WIDTH = 0.25f;
+            float width = 0.25f;
+
+            CivParentCategoryScroller.TextStyle.Apply();
+            Rage.Native.NativeFunction.Natives.x54CE8AC98E120CAB("STRING"); // _BEGIN_TEXT_COMMAND_GET_WIDTH
+            if (menu.TitleText == "Civilian Interaction Menu")
+            {
+                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(CivParentCategoryScroller.SelectedItem);
+            }
+            else if (menu.TitleText == "Cop Interaction Menu")
+            {
+                Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(CopParentCategoryScroller.SelectedItem);
+            }
+            float scrollerTextWidth = Rage.Native.NativeFunction.Natives.x85F061DA64ED2F67<float>(true); // _END_TEXT_COMMAND_GET_WIDTH
+            float padding = 0.00390625f * 2; // typical padding used in RNUI
+
+            var scrollerItemWidth = scrollerTextWidth + padding;
+            //Game.LogTrivial($"Scroller item width: {scrollerItemWidth}");
+            float subScrollerItemWidth = 0;
+
+            foreach (var menuItem in menu.MenuItems)
+            {
+                menuItem.TextStyle.Apply();
+                Rage.Native.NativeFunction.Natives.x54CE8AC98E120CAB("STRING"); // _BEGIN_TEXT_COMMAND_GET_WIDTH
+                if(menuItem.GetType() == typeof(UIMenuListScrollerItem<string>))
+                {
+                    var scrollerMenuItem = menuItem as UIMenuListScrollerItem<string>;
+                    Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(scrollerMenuItem.OptionText);
+                }
+                else
+                {
+                    Rage.Native.NativeFunction.Natives.ADD_TEXT_COMPONENT_SUBSTRING_PLAYER_NAME(menuItem.Text);
+                }
+
+                float textWidth = Rage.Native.NativeFunction.Natives.x85F061DA64ED2F67<float>(true); // _END_TEXT_COMMAND_GET_WIDTH
+                //Game.LogTrivial($"Menu item width: {textWidth}");
+                var newWidth = Math.Max(textWidth + padding, UIMenu.DefaultWidth);
+                //Game.LogTrivial($"Menu item width: {newWidth}");
+
+                if(menuItem.GetType() == typeof(UIMenuListScrollerItem<string>))
+                {
+                    subScrollerItemWidth = textWidth;
+                    //Game.LogTrivial($"Subscroller width: {subScrollerItemWidth}");
+                }
+
+                // Minimum width is set to prevent the scroller from clipping the menu item name
+                if (newWidth < MINIMUM_WIDTH)
+                {
+                    newWidth = MINIMUM_WIDTH;
+                }
+                if (newWidth > width)
+                {
+                    width = newWidth;
+                }
+            }
+            // If either scroll item is wide enough, multiple by 0.1f to keep it from overlapping the text
+            if (scrollerItemWidth > 0.15 || subScrollerItemWidth > 0.15)
+            {
+                //width += 0.025f;
+                width += width * 0.1f;
+            }
+            // When the menu consists of only scroller items
+            if (menu.MenuItems.Count() == 2 && menu.MenuItems[0].GetType() == typeof(UIMenuListScrollerItem<string>) && menu.MenuItems[1].GetType() == typeof(UIMenuListScrollerItem<string>))
+            {
+                width = Math.Max(scrollerItemWidth, subScrollerItemWidth);
+                width += 0.5f * width;
+                if(width < MINIMUM_WIDTH)
+                {
+                    width = MINIMUM_WIDTH;
+                }
+            }
+            menu.Width = width;
+        }
+
+        private static bool MatchingMenuOpen(UIMenu menu, ParentCategory parentCategory)
+        {
+            if ((parentCategory.Menu == Settings.Group.Civilian && menu.TitleText.Contains("Civilian")) || (parentCategory.Menu == Settings.Group.Cop && menu.TitleText.Contains("Cop")))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
     }
