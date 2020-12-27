@@ -12,7 +12,7 @@ namespace BetterPedInteractions
         internal Ped Ped { get; private set; }
         internal Blip Blip { get; private set; }
         internal Settings.Group Group { get; set; }
-        internal ResponseType ResponseType { get; set; } = ResponseType.Unspecified;
+        internal ResponseHonesty ResponseHonesty { get; set; } = ResponseHonesty.Unspecified;
         internal Dictionary<XElement, XElement> UsedQuestions { get; set; } = new Dictionary<XElement, XElement>();
         internal string Gender { get; private set; }
         internal bool Following { get; private set; } = false;
