@@ -7,9 +7,10 @@ namespace BetterPedInteractions
 {
     internal static class VocalInterface
     {
-        private static SpeechRecognitionEngine SRE = new SpeechRecognitionEngine(new System.Globalization.CultureInfo(Settings.SpeechLanguage));
+        internal static SpeechRecognitionEngine SRE = new SpeechRecognitionEngine(new System.Globalization.CultureInfo(Settings.SpeechLanguage));
         internal static Choices Phrases = new Choices();
-        internal static bool CapturingInput { get; private set; } = false;
+        internal static bool AllowVoiceCapture { get; set; } = false;
+        internal static bool CapturingInput { get; set; } = false;
         private static bool SpeechDetected { get; set; } = false;
         private static bool SpeechRecognized { get; set; } = false;
         private static bool PlayerTalking { get; set; } = false;
@@ -18,11 +19,6 @@ namespace BetterPedInteractions
 
         internal static void Initialize()
         {
-            GrammarBuilder gb = new GrammarBuilder(Phrases);
-            Game.LogTrivial($"Initializing voice recognition.");
-
-            Grammar gr = new Grammar(gb);
-            SRE.LoadGrammar(gr);
             try
             {
                 SRE.SetInputToDefaultAudioDevice();
@@ -33,6 +29,13 @@ namespace BetterPedInteractions
                 Game.DisplayHelp("~o~[Better Ped Interactions] ~r~ERROR~w~\nYour default input device was not detected.");
                 return;
             }
+            AllowVoiceCapture = true;
+            GrammarBuilder gb = new GrammarBuilder(Phrases);
+            Game.LogTrivial($"Initializing voice recognition.");
+
+            Grammar gr = new Grammar(gb);
+            SRE.LoadGrammar(gr);
+
             SRE.BabbleTimeout = TimeSpan.FromSeconds(1);
             SRE.InitialSilenceTimeout = TimeSpan.FromSeconds(1);
             SRE.EndSilenceTimeout = TimeSpan.FromSeconds(1);
@@ -41,60 +44,64 @@ namespace BetterPedInteractions
             SRE.SpeechRecognized += SRE_SpeechRecognized;
             SRE.RecognizeCompleted += SRE_RecognizeCompleted;
             SRE.SpeechRecognitionRejected += SRE_SpeechRecognitionRejected;
+
+            //CaptureUserInput();
         }
 
-        internal static void CaptureUserInput()
-        {
-            //CapturingInput = true;
-            Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~b~started");
-            SRE.RecognizeAsync(RecognizeMode.Multiple);
-            GameFiber.StartNew(() =>
-            {
-                //while (CapturingInput)
-                while(true)
-                {
-                    ManagePlayerLipAnimation();
-                    if (SpeechRecognized)
-                    {
-                        Game.LogTrivial($"Searching for nearby ped.");
-                        var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
-                        if (nearbyPed)
-                        {
-                            Game.LogTrivial($"Interacting with nearby ped.");
-                            EntryPoint.CollectOrFocusNearbyPed(nearbyPed);
-                            GameFiber.Sleep(1000);
-                            ResponseManager.GetResponseFromAudio(RecentlyCapturedPhrase);
-                        }
-                        SpeechRecognized = false;
-                    }
-                    GameFiber.Yield();
-                }
-                //Game.LocalPlayer.Character.Tasks.ClearSecondary();
-                //if(RecentlyCapturedPhrase != null)
-                //{
-                //    var nearbyPed = EntryPoint.GetNearbyPed();
-                //    if(nearbyPed && EntryPoint.focusedPed?.Ped != nearbyPed)
-                //    {
-                //        EntryPoint.CollectOrFocusNearbyPed(EntryPoint.GetNearbyPed());
-                //    }
-                //    ResponseManager.GetResponseFromAudio(RecentlyCapturedPhrase);
-                //}
-            });
+        //internal static void CaptureUserInput()
+        //{
+        //    //CapturingInput = true;
+        //    StartRecognition();
+        //    GameFiber.StartNew(() =>
+        //    {
+        //        //while (CapturingInput)
+        //        while(true)
+        //        {
+        //            if (CapturingInput)
+        //            {
+        //                ManagePlayerLipAnimation();
+        //                if (SpeechRecognized)
+        //                {
+        //                    Game.LogTrivial($"Searching for nearby ped.");
+        //                    var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
+        //                    if (nearbyPed)
+        //                    {
+        //                        Game.LogTrivial($"Interacting with nearby ped.");
+        //                        EntryPoint.CollectOrFocusNearbyPed(nearbyPed);
+        //                        GameFiber.Sleep(1000);
+        //                        ResponseManager.GetResponseFromAudio(RecentlyCapturedPhrase);
+        //                    }
+        //                    SpeechRecognized = false;
+        //                }
+        //            }
+        //            GameFiber.Yield();
+        //        }
+        //        //Game.LocalPlayer.Character.Tasks.ClearSecondary();
+        //        //if(RecentlyCapturedPhrase != null)
+        //        //{
+        //        //    var nearbyPed = EntryPoint.GetNearbyPed();
+        //        //    if(nearbyPed && EntryPoint.focusedPed?.Ped != nearbyPed)
+        //        //    {
+        //        //        EntryPoint.CollectOrFocusNearbyPed(EntryPoint.GetNearbyPed());
+        //        //    }
+        //        //    ResponseManager.GetResponseFromAudio(RecentlyCapturedPhrase);
+        //        //}
+        //    });
 
-            void ManagePlayerLipAnimation()
-            {
-                if (SpeechDetected && !PlayerTalking)
-                {
-                    Game.LocalPlayer.Character.Tasks.PlayAnimation("mp_facial", "mic_chatter", 1.0f, AnimationFlags.SecondaryTask);
-                    PlayerTalking = true;
-                }
-                if (!SpeechDetected && PlayerTalking)
-                {
-                    Game.LocalPlayer.Character.Tasks.ClearSecondary();
-                    PlayerTalking = false;
-                }
-            }
-        }
+        //    void ManagePlayerLipAnimation()
+        //    {
+        //        if (SpeechDetected && !PlayerTalking)
+        //        {
+        //            Game.LocalPlayer.Character.Tasks.PlayAnimation("mp_facial", "mic_chatter", 1.0f, AnimationFlags.SecondaryTask);
+        //            PlayerTalking = true;
+        //        }
+        //        if (!SpeechDetected && PlayerTalking)
+        //        {
+        //            Game.LocalPlayer.Character.Tasks.ClearSecondary();
+        //            PlayerTalking = false;
+        //        }
+        //    }
+        //}
 
         private static void SRE_SpeechDetected(object sender, SpeechDetectedEventArgs e)
         {
@@ -129,7 +136,6 @@ namespace BetterPedInteractions
         private static void SRE_RecognizeCompleted(object sender, RecognizeCompletedEventArgs e)
         {
             Game.LogTrivial($"Recognition completed.");
-            Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~y~ended~w~.");
             //CapturingInput = false;
         }
 
@@ -140,7 +146,50 @@ namespace BetterPedInteractions
             SpeechDetected = false;
         }
 
-        internal static void EndSRE()
+        internal static void StartRecognition()
+        {
+            SRE.RecognizeAsync(RecognizeMode.Multiple);
+            GameFiber.StartNew(() =>
+            {
+                while (true)
+                {
+                    if (CapturingInput)
+                    {
+                        ManagePlayerLipAnimation();
+                        if (SpeechRecognized)
+                        {
+                            Game.LogTrivial($"Searching for nearby ped.");
+                            var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
+                            if (nearbyPed)
+                            {
+                                Game.LogTrivial($"Interacting with nearby ped.");
+                                EntryPoint.CollectOrFocusNearbyPed(nearbyPed);
+                                GameFiber.Sleep(1000);
+                                ResponseManager.FindMatchingPromptFromAudio(RecentlyCapturedPhrase);
+                            }
+                            SpeechRecognized = false;
+                        }
+                    }
+                    GameFiber.Yield();
+                }
+            });
+
+            void ManagePlayerLipAnimation()
+            {
+                if (SpeechDetected && !PlayerTalking)
+                {
+                    Game.LocalPlayer.Character.Tasks.PlayAnimation("mp_facial", "mic_chatter", 1.0f, AnimationFlags.SecondaryTask);
+                    PlayerTalking = true;
+                }
+                if (!SpeechDetected && PlayerTalking)
+                {
+                    Game.LocalPlayer.Character.Tasks.ClearSecondary();
+                    PlayerTalking = false;
+                }
+            }
+        }
+
+        internal static void EndRecognition()
         {
             SRE.RecognizeAsyncCancel();
         }
