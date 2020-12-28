@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RAGENativeUI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,7 @@ namespace BetterPedInteractions
     {
         public virtual string File { get; set; }
         public XElement Name { get; set; }
+        public virtual UIMenu Menu { get; set; }
         internal int Level { get; set; } = 1;
         internal bool Enabled { get; set; } = true;
         public List<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
@@ -25,16 +27,33 @@ namespace BetterPedInteractions
             get { return base.File; }
             set
             {
-                base.File = value;  // this assignment is invoking the base setter
+                base.File = value;
             }
         }
-        internal Settings.Group Menu { get; set; }
+        public override UIMenu Menu
+        {
+            get { return base.Menu; }
+            set
+            {
+                base.Menu = value;
+            }
+        }
+        internal Settings.Group Group { get; set; }
         internal List<SubCategory> SubCategories { get; private set; } = new List<SubCategory>();
         //internal new List<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
         internal ParentCategory(XElement name, Settings.Group menu, string file)
         {
             Name = name;
-            Menu = menu;
+            Group = menu;
+            if(menu == Settings.Group.Civilian)
+            {
+                Menu = MenuManager.CivMenu;
+            }
+            else if (menu == Settings.Group.Cop)
+            {
+                Menu = MenuManager.CopMenu;
+            }
+            //Menu = menu;
             File = file;
         }
     }
@@ -46,7 +65,15 @@ namespace BetterPedInteractions
             get { return base.File; }
             set
             {
-                base.File = value;  // this assignment is invoking the base setter
+                base.File = value;
+            }
+        }
+        public override UIMenu Menu
+        {
+            get { return base.Menu; }
+            set
+            {
+                base.Menu = value;
             }
         }
         internal ParentCategory ParentCategory { get; set; }
