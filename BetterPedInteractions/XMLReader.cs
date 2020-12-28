@@ -81,7 +81,15 @@ namespace BetterPedInteractions
                 {
                     newMenuItem.Enabled = bool.Parse(menuItem.Attribute("enableByDefault").Value);
                 }
-                newMenuItem.Category = category;
+                if(categoryType.Name == "SubCategory")
+                {
+                    newMenuItem.Category = category as SubCategory;
+                }
+                else
+                {
+                    newMenuItem.Category = category as ParentCategory;
+                }
+                //Game.LogTrivial($"newMenuItem Category: {newMenuItem.Category.GetType()}");
                 if (menuItem.Element("Level") != null)
                 {
                     newMenuItem.Level = int.Parse(menuItem.Element("Level").Value);
@@ -97,7 +105,7 @@ namespace BetterPedInteractions
                     //VocalInterface.AudioPrompts.Add(newMenuItem.MenuPrompt.Value);
                     //Game.LogTrivial($"Phrase from menu prompt: {newMenuItem.MenuPrompt.Value}");
                     var audioPrompts = menuItem.Elements("AudioPrompt").Select(x => x.Value).ToList();
-                    //VocalInterface.AudioPrompts.AddRange(audioPrompts);
+                    VocalInterface.AudioPrompts.AddRange(audioPrompts);
                     foreach (string audioPrompt in audioPrompts)
                     {
                         //Game.LogTrivial($"Audio prompt: {audioPrompt}");
