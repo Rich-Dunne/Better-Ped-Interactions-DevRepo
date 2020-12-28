@@ -18,7 +18,7 @@ namespace BetterPedInteractions
             ParentCategories = parentCategories;
         }
 
-        internal static void FindMatchingPromptFromAudio(string question)
+        internal static void FindMatchingPromptFromAudio(string heardPrompt)
         {
             var allMenuItems = GetAllMenuItems();
             MenuItem matchingPrompt = GetMatchingPrompt();
@@ -34,10 +34,10 @@ namespace BetterPedInteractions
 
             MenuItem GetMatchingPrompt()
             {
-                var prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == question && x.Category.GetType() == typeof(ParentCategory));
+                var prompt = allMenuItems.FirstOrDefault(x => (x.MenuPrompt?.Value == heardPrompt || x.AudioPrompts.Contains(heardPrompt)) && x.Category.GetType() == typeof(ParentCategory));
                 if (prompt == null)
                 {
-                    prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == question && x.Category.GetType() == typeof(SubCategory));
+                    prompt = allMenuItems.FirstOrDefault(x => (x.MenuPrompt?.Value == heardPrompt || x.AudioPrompts.Contains(heardPrompt)) && x.Category.GetType() == typeof(SubCategory));
                 }
                 return prompt != null ? prompt : null;
             }
@@ -145,6 +145,13 @@ namespace BetterPedInteractions
 
         private static void ChoosePedResponse(MenuItem prompt)
         {
+            if(prompt.Action != null)
+            {
+                Game.LogTrivial($"Action: {prompt.Action.Text}");
+                Game.LogTrivial($"Heard prompt is a ped action.  We don't need a response.");
+                return;
+            }
+
             var focusedPed = EntryPoint.FocusedPed;
             Game.LogTrivial($"Focused ped: {focusedPed.Ped.Model.Name}");
             XElement response = null;
@@ -268,11 +275,11 @@ namespace BetterPedInteractions
 
             void NotifyPlayerOfNewDialoguePathOptions(List<MenuItem> newDialogueOptions)
             {
-                var updatedCategories = newDialogueOptions.Select(x => x.Category.Name.Value).Distinct();
+                var updatedCategories = newDialogueOptions.Select(x => x.Category).Distinct();
                 string updatedCategoriesString = "";
-                foreach (string category in updatedCategories)
+                foreach (Category category in updatedCategories)
                 {
-                    updatedCategoriesString += $"~b~{category}~w~, ";
+                    updatedCategoriesString += $"~b~{category.Name.Value} [{category.Menu.TitleText}]~w~, ";
                 }
                 if(updatedCategoriesString != "")
                 {
@@ -292,7 +299,7 @@ namespace BetterPedInteractions
                     {
                         //Game.LogTrivial($"Category: {category.Name.Value}, File: {category.File}");
                         category.Enabled = true;
-                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nCategory unlocked with new dialogue options: ~b~{category.Name.Value}~w~.");
+                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nCategory unlocked with new dialogue options: ~b~{category.Name.Value} [{category.Menu.TitleText}]~w~.");
                     }
                 }
             }
