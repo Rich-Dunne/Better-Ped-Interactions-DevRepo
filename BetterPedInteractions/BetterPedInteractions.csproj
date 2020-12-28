@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CollectedPed.cs" />
+    <Compile Include="DamerauLevensteinMetric.cs" />
     <Compile Include="EntryPoint.cs" />
     <Compile Include="MenuItem.cs" />
     <Compile Include="Category.cs" />
