@@ -61,7 +61,7 @@ namespace BetterPedInteractions
         {
             try
             {
-                Game.LogTrivial($"Speech recognized: {e.Result.Text}");
+                Game.LogTrivial($"Speech heard: {e.Result.Text}");
                 RecentlyCapturedPhrase = e.Result.Text;
                 // Compare phrase to everything in AudioPrompts
                 var possibleMatches = new List<int>();
@@ -78,11 +78,12 @@ namespace BetterPedInteractions
                     RecentlyCapturedPhrase = match;
                     SpeechDetected = false;
                     SpeechRecognized = true;
-                    Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nSpeech ~g~recognized:~w~ {match}");
+                    //Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nSpeech ~g~recognized:~w~ {match}");
                 }
                 else
                 {
-                    Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\n~r~No matching prompts found~w~.");
+                    Game.LogTrivial($"No matching prompts found.");
+                    //Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\n~r~No matching prompts found~w~.");
                 }
 
             }
