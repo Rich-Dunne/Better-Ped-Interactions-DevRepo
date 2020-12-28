@@ -18,5 +18,14 @@ namespace BetterPedInteractions
         {
             Element = element;
         }
+
+        internal bool BelongsTo(Category category)
+        {
+            if (category.MenuItems.Contains(this))
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }
