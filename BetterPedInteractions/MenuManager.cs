@@ -232,7 +232,6 @@ namespace BetterPedInteractions
                     {
                         //Game.LogTrivial($"[MENU ADD] Menu: {menuCategoryObject.Menu}, Category: {menuCategoryObject.Name.Value}, Prompt: {menuItem.MenuPrompt.Value}");
                         menu.AddItem(_DialogueItem = new UIMenuItem(menuItem.MenuPrompt.Value));
-                        //_DialogueItem.HighlightedBackColor = _DialogueItem.ForeColor;
                         AssignFontColorFromAttribute(menuItem, _DialogueItem);
                     }
                 }
@@ -243,26 +242,19 @@ namespace BetterPedInteractions
 
             void AddPedActionsToMenu()
             {
-                IEnumerable<MenuItem> matchingPrompts;
-                if (menu.MenuItems.Count > 1 && subCategories.Count > 0 && _subMenuScroller.OptionCount > 0)
-                {
-                    //Game.LogTrivial($"Subscroller selected item: {_subMenuScroller.SelectedItem}");
-                    var matchingSubCategory = subCategories.FirstOrDefault(x => _subMenuScroller.SelectedItem == x.Name.Value);
-                    if (matchingSubCategory == null)
-                    {
-                        Game.LogTrivial($"Matching sub category is null.");
-                        return;
-                    }
-                    matchingPrompts = matchingSubCategory.MenuItems.Where(x => x.MenuPrompt.Attribute("action") != null);
-                    //Game.LogTrivial($"Possible prompts: {matchingPrompts.Count()}");
-                }
-                else
-                {
-                    matchingPrompts = parentCategory.MenuItems.Where(x => x.MenuPrompt.Attribute("action") != null);
-                }
+                var allCivMenuItems = GetAllMenuItems(Settings.Group.Civilian);
+                var civActionItems = allCivMenuItems.Where(x => x.MenuPrompt.Attribute("action") != null).Distinct().ToList();
+                AssignActionsToMenuItems(civActionItems);
+                var allCopMenuItems = GetAllMenuItems(Settings.Group.Cop);
+                var copActionItems = allCivMenuItems.Where(x => x.MenuPrompt.Attribute("action") != null).Distinct().ToList();
+                AssignActionsToMenuItems(copActionItems);
+            }
 
-                foreach (MenuItem menuItem in matchingPrompts)
+            void AssignActionsToMenuItems(List<MenuItem> menuItems)
+            {
+                foreach (MenuItem menuItem in menuItems)
                 {
+                    Game.LogTrivial($"Adding action to {menuItem.MenuPrompt.Value}");
                     if (menuItem.MenuPrompt.Attribute("action").Value == "follow")
                     {
                         menu.AddItem(_FollowMe);
