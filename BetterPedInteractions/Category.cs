@@ -41,15 +41,15 @@ namespace BetterPedInteractions
         internal Settings.Group Group { get; set; }
         internal List<SubCategory> SubCategories { get; private set; } = new List<SubCategory>();
         //internal new List<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
-        internal ParentCategory(XElement name, Settings.Group menu, string file)
+        internal ParentCategory(XElement name, Settings.Group group, string file)
         {
             Name = name;
-            Group = menu;
-            if(menu == Settings.Group.Civilian)
+            Group = group;
+            if(group == Settings.Group.Civilian)
             {
                 Menu = MenuManager.CivMenu;
             }
-            else if (menu == Settings.Group.Cop)
+            else if (group == Settings.Group.Cop)
             {
                 Menu = MenuManager.CopMenu;
             }
