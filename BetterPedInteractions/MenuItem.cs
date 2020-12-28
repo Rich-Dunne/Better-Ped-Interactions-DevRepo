@@ -11,8 +11,9 @@ namespace BetterPedInteractions
         internal bool Enabled { get; set; } = true;
         internal int Level { get; set; } = 1;
         internal XElement MenuPrompt { get; set; }
-        internal List<XElement> Responses { get; set; }
-        internal UIMenuItem Action { get; set; }
+        internal List<XElement> Responses { get; set; } = new List<XElement>();
+        internal List<string> AudioPrompts { get; set; } = new List<string>();
+        internal UIMenuItem Action { get; set; } = null;
 
         internal MenuItem(XElement element)
         {
