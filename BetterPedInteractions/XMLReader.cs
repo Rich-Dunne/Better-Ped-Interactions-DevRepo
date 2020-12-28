@@ -94,8 +94,10 @@ namespace BetterPedInteractions
                 if(newMenuItem.MenuPrompt != null)
                 {
                     VocalInterface.Phrases.Add(newMenuItem.MenuPrompt.Value);
+                    //VocalInterface.AudioPrompts.Add(newMenuItem.MenuPrompt.Value);
                     //Game.LogTrivial($"Phrase from menu prompt: {newMenuItem.MenuPrompt.Value}");
                     var audioPrompts = menuItem.Elements("AudioPrompt").Select(x => x.Value).ToList();
+                    //VocalInterface.AudioPrompts.AddRange(audioPrompts);
                     foreach (string audioPrompt in audioPrompts)
                     {
                         //Game.LogTrivial($"Audio prompt: {audioPrompt}");
