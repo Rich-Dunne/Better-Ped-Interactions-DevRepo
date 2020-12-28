@@ -34,10 +34,10 @@ namespace BetterPedInteractions
 
             MenuItem GetMatchingPrompt()
             {
-                var prompt = allMenuItems.First(x => x.MenuPrompt?.Value == question && x.Category.GetType() == typeof(ParentCategory));
+                var prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value.Trim('.','?') == question && x.Category.GetType() == typeof(ParentCategory));
                 if (prompt == null)
                 {
-                    prompt = allMenuItems.First(x => x.MenuPrompt?.Value == question && x.Category.GetType() != typeof(ParentCategory));
+                    prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value.Trim('.', '?') == question && x.Category.GetType() == typeof(SubCategory));
                 }
                 return prompt != null ? prompt : null;
             }
@@ -63,11 +63,11 @@ namespace BetterPedInteractions
                 // If the second menu item was not a scroller, then we need to get response from primary category menu items, else we need to get it from subcategory menu items
                 if (menu.MenuItems[1].GetType() != typeof(UIMenuListScrollerItem<string>))
                 {
-                    return allMenuItems.First(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() == typeof(ParentCategory));
+                    return allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() == typeof(ParentCategory));
                 }
                 else
                 {
-                    return allMenuItems.First(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() != typeof(ParentCategory));
+                    return allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() == typeof(SubCategory));
                 }
             }
         }
@@ -159,6 +159,16 @@ namespace BetterPedInteractions
             {
                 AdjustPedAgitation();
             }
+            // Need to populate menu here or in VocalInterface
+            Game.LogTrivial($"Item is from menu: {prompt.Category.Menu.TitleText}");
+            if (prompt.Category.Menu == MenuManager.CivMenu)
+            {
+                MenuManager.PopulateMenu(prompt.Category.Menu, MenuManager.CivParentCategoryScroller);
+            }
+            else if (prompt.Category.Menu == MenuManager.CopMenu)
+            {
+                MenuManager.PopulateMenu(prompt.Category.Menu, MenuManager.CopParentCategoryScroller);
+            }
 
             void GetResponse()
             {
@@ -196,7 +206,11 @@ namespace BetterPedInteractions
             int GetRandomResponseValue()
             {
                 Random r = new Random();
-                return r.Next(prompt.Responses.Count);
+                Game.LogTrivial($"Possible responses: {prompt.Responses.Count()}");
+                var num = r.Next(prompt.Responses.Count);
+                Game.LogTrivial($"Random number: {num}");
+                return num;
+                //return r.Next(prompt.Responses.Count);
             }
 
             void SetPedResponseHonesty()
@@ -224,7 +238,7 @@ namespace BetterPedInteractions
                     Game.LogTrivial($"Enabling dialogue path {response.Attribute("enablesDialoguePath").Value}");
                     var allMenuItems = GetAllMenuItems();
                     //Game.LogTrivial($"All menu items: {allMenuItems.Count()}");
-                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => x.Element.Attribute("dialoguePath") != null && (x.Element.Attribute("dialoguePath").Value == response.Attribute("enablesDialoguePath").Value || x.Element.Attribute("dialoguePath").Value == prompt.MenuPrompt.Attribute("enablesDialoguePath").Value));
+                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => (x.Element.Attribute("dialoguePath") != null && response.Attribute("enablesDialoguePath") != null && (x.Element.Attribute("dialoguePath").Value == response.Attribute("enablesDialoguePath").Value) || prompt.MenuPrompt.Attribute("enablesDialoguePath") != null && x.Element.Attribute("dialoguePath").Value == prompt.MenuPrompt.Attribute("enablesDialoguePath").Value));
                     //Game.LogTrivial($"To be enabled: {itemsWithPathToBeEnabled.Count()}");
                     foreach (MenuItem menuItem in itemsWithPathToBeEnabled)
                     {
@@ -263,7 +277,7 @@ namespace BetterPedInteractions
                 if(updatedCategoriesString != "")
                 {
                     updatedCategoriesString.Trim(' ', ',');
-                    Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nNew dialogue options unlocked in category: {updatedCategoriesString.Trim(' ', ',')}.");
+                    Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nNew dialogue options unlocked in category: {updatedCategoriesString.Trim(' ', ',')}~w~.");
                 }
             }
 
@@ -280,8 +294,6 @@ namespace BetterPedInteractions
                         category.Enabled = true;
                         Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nCategory unlocked with new dialogue options: ~b~{category.Name.Value}~w~.");
                     }
-
-
                 }
             }
 
