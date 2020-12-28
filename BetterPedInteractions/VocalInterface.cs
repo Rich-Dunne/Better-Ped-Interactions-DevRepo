@@ -65,16 +65,26 @@ namespace BetterPedInteractions
                 RecentlyCapturedPhrase = e.Result.Text;
                 // Compare phrase to everything in AudioPrompts
                 var possibleMatches = new List<int>();
+                Game.LogTrivial($"Searching {AudioPrompts.Count()} possible matches.");
                 foreach (string phrase in AudioPrompts)
                 {
                     possibleMatches.Add(DamerauLevensteinMetric.LevenshteinDistance(phrase, RecentlyCapturedPhrase));
                 }
-                string match = AudioPrompts.ElementAt(possibleMatches.IndexOf(possibleMatches.Min()));
-                Game.LogTrivial($"Best match: {match}");
-                RecentlyCapturedPhrase = match;
-                SpeechDetected = false;
-                SpeechRecognized = true;
-                Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nSpeech ~g~recognized:~w~ {e.Result.Text}");
+
+                if(possibleMatches.Count > 0)
+                {
+                    string match = AudioPrompts.ElementAt(possibleMatches.IndexOf(possibleMatches.Min()));
+                    Game.LogTrivial($"Best match: {match}");
+                    RecentlyCapturedPhrase = match;
+                    SpeechDetected = false;
+                    SpeechRecognized = true;
+                    Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nSpeech ~g~recognized:~w~ {match}");
+                }
+                else
+                {
+                    Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\n~r~No matching prompts found~w~.");
+                }
+
             }
             catch (Exception ex)
             {
@@ -106,7 +116,7 @@ namespace BetterPedInteractions
                 {
                     if (CapturingInput)
                     {
-                        //ManagePlayerLipAnimation();
+                        ManagePlayerLipAnimation();
                         if (SpeechRecognized)
                         {
                             Game.LogTrivial($"Searching for nearby ped.");
