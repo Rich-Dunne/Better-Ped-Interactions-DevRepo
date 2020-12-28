@@ -95,23 +95,19 @@ namespace BetterPedInteractions
                     newMenuItem.Level = int.Parse(menuItem.Element("Level").Value);
                 }
                 newMenuItem.MenuPrompt = menuItem.Element("MenuPrompt");
-                newMenuItem.Responses = menuItem.Elements("Response").ToList();
-                //Game.LogTrivial($"---Prompt: {newMenuItem.MenuPrompt?.Value}, Level: {newMenuItem.Level}, Responses: {newMenuItem.Responses?.Count()}");
-                category.MenuItems.Add(newMenuItem);
-
                 if(newMenuItem.MenuPrompt != null)
                 {
-                    VocalInterface.Phrases.Add(newMenuItem.MenuPrompt.Value);
-                    //VocalInterface.AudioPrompts.Add(newMenuItem.MenuPrompt.Value);
-                    //Game.LogTrivial($"Phrase from menu prompt: {newMenuItem.MenuPrompt.Value}");
-                    var audioPrompts = menuItem.Elements("AudioPrompt").Select(x => x.Value).ToList();
-                    VocalInterface.AudioPrompts.AddRange(audioPrompts);
-                    foreach (string audioPrompt in audioPrompts)
-                    {
-                        //Game.LogTrivial($"Audio prompt: {audioPrompt}");
-                        VocalInterface.Phrases.Add(audioPrompt);
-                    }
+                    VocalInterface.AudioPrompts.Add(newMenuItem.MenuPrompt.Value);
                 }
+                newMenuItem.Responses = menuItem.Elements("Response").ToList();
+                var audioPrompts = menuItem.Elements("AudioPrompt").ToList();
+                if(audioPrompts.Count > 0)
+                {
+                    audioPrompts.ForEach(x => newMenuItem.AudioPrompts.Add(x.Value));
+                    audioPrompts.ForEach(x => VocalInterface.AudioPrompts.Add(x.Value));
+                }
+                //Game.LogTrivial($"---Prompt: {newMenuItem.MenuPrompt?.Value}, Level: {newMenuItem.Level}, Responses: {newMenuItem.Responses?.Count()}");
+                category.MenuItems.Add(newMenuItem);
             }
             return category.MenuItems;
         }
