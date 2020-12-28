@@ -34,10 +34,10 @@ namespace BetterPedInteractions
 
             MenuItem GetMatchingPrompt()
             {
-                var prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value.Trim('.','?') == question && x.Category.GetType() == typeof(ParentCategory));
+                var prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == question && x.Category.GetType() == typeof(ParentCategory));
                 if (prompt == null)
                 {
-                    prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value.Trim('.', '?') == question && x.Category.GetType() == typeof(SubCategory));
+                    prompt = allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == question && x.Category.GetType() == typeof(SubCategory));
                 }
                 return prompt != null ? prompt : null;
             }
