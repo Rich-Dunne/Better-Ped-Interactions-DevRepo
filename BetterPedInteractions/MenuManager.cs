@@ -39,9 +39,11 @@ namespace BetterPedInteractions
 
                 var allMenuItems = GetAllMenuItems(Settings.Group.Civilian);
                 allMenuItems.ForEach(x => x.Category.Menu = CivMenu);
+                //allMenuItems.ForEach(x => Game.LogTrivial($"Menu Item: {x.MenuPrompt.Value}, Category: {x.Category.Name.Value}, Menu: {x.Category.Menu.TitleText}"));
 
-                var civCategories = _parentCategories.Where(x => x.Group == Settings.Group.Civilian).Select(x => x.Name).Distinct().ToList();
-                var civCategoriesList = civCategories.Select(x => x.Value).ToList();
+                var civCategories = _parentCategories.Where(x => x.Group == Settings.Group.Civilian).Distinct().ToList();
+                civCategories.ForEach(x => x.Menu = CivMenu);
+                var civCategoriesList = civCategories.Select(x => x.Name.Value).ToList();
                 //Game.LogTrivial($"Civ Categories: {civCategories.Count()}");
                 CivMenu.AddItem(CivParentCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civCategoriesList));
 
@@ -119,14 +121,14 @@ namespace BetterPedInteractions
 
                 var allMenuItems = GetAllMenuItems(Settings.Group.Cop);
                 allMenuItems.ForEach(x => x.Category.Menu = CopMenu);
+                //allMenuItems.ForEach(x => Game.LogTrivial($"Menu Item: {x.MenuPrompt.Value}, Category: {x.Category.Name.Value}, Menu: {x.Category.Menu.TitleText}"));
 
-                var copCategories = _parentCategories.Where(x => x.Group == Settings.Group.Cop).Select(x => x.Name).Distinct().ToList();
-                //var copSubCategories = _menuCategoryObjects.SelectMany(x => x.SubCategories.Where(y => y.ParentCategory.Menu == Settings.Group.Cop));
-                var civCategoriesList = copCategories.Select(x => x.Value).ToList();
-                CopMenu.AddItem(CopParentCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", civCategoriesList));
+                var copCategories = _parentCategories.Where(x => x.Group == Settings.Group.Cop).Distinct().ToList();
+                copCategories.ForEach(x => x.Menu = CopMenu);
+                var copCategoriesList = copCategories.Select(x => x.Name.Value).ToList();
+                CopMenu.AddItem(CopParentCategoryScroller = new UIMenuListScrollerItem<string>("Category", "The category of the questions", copCategoriesList));
 
                 PopulateMenu(CopMenu, CopParentCategoryScroller);
-                SetMenuWidth(CopMenu);
                 CopMenu.RefreshIndex();
 
                 CopMenu.MouseControlsEnabled = false;
@@ -205,7 +207,7 @@ namespace BetterPedInteractions
             }
             else
             {
-                IEnumerable<MenuItem> promptsMatchingReadLevel;
+                IEnumerable<MenuItem> promptsMatchingCategoryLevel;
 
                 if (menu.MenuItems.Count > 1 && subCategories.Count > 0 && _subMenuScroller.OptionCount > 0)
                 {
@@ -217,14 +219,14 @@ namespace BetterPedInteractions
                         Game.LogTrivial($"Matching sub category is null.");
                         return;
                     }
-                    promptsMatchingReadLevel = matchingSubCategory.MenuItems.Where(x => x.Level <= matchingSubCategory.Level);
+                    promptsMatchingCategoryLevel = matchingSubCategory.MenuItems.Where(x => x.Level <= matchingSubCategory.Level);
                 }
                 else
                 {
-                    promptsMatchingReadLevel = parentCategory.MenuItems.Where(x => x.Level <= parentCategory.Level);
+                    promptsMatchingCategoryLevel = parentCategory.MenuItems.Where(x => x.Level <= parentCategory.Level);
                 }
 
-                foreach (MenuItem menuItem in promptsMatchingReadLevel.Where(x => x.Enabled && x.MenuPrompt != null))
+                foreach (MenuItem menuItem in promptsMatchingCategoryLevel.Where(x => x.Enabled && x.MenuPrompt != null))
                 {
                     if (EntryPoint.FocusedPed == null || (EntryPoint.FocusedPed != null && !EntryPoint.FocusedPed.UsedQuestions.ContainsKey(menuItem.MenuPrompt)))
                     {
@@ -246,13 +248,13 @@ namespace BetterPedInteractions
                 {
                     //Game.LogTrivial($"Subscroller selected item: {_subMenuScroller.SelectedItem}");
                     var matchingSubCategory = subCategories.FirstOrDefault(x => _subMenuScroller.SelectedItem == x.Name.Value);
-                    //Game.LogTrivial($"Possible prompts: {promptsMatchingReadLevel.Count()}");
                     if (matchingSubCategory == null)
                     {
                         Game.LogTrivial($"Matching sub category is null.");
                         return;
                     }
                     matchingPrompts = matchingSubCategory.MenuItems.Where(x => x.MenuPrompt.Attribute("action") != null);
+                    //Game.LogTrivial($"Possible prompts: {matchingPrompts.Count()}");
                 }
                 else
                 {
@@ -354,6 +356,7 @@ namespace BetterPedInteractions
 
             if (scroller == menu.MenuItems[1])
             {
+                //Game.LogTrivial($"Scrolled {scroller.Text}");
                 ScrollSubMenu();
             }
             SetMenuWidth(menu);
@@ -394,12 +397,12 @@ namespace BetterPedInteractions
                 {
                     menu.RemoveItemAt(2);
                 }
-
-                var parentCategory = _parentCategories.FirstOrDefault(x => x.Name.Value == categoryScroller.OptionText);
-                if (MatchingMenuOpen(menu, parentCategory))
-                {
+                var parentCategory = _parentCategories.FirstOrDefault(x => x.Name.Value == categoryScroller.OptionText && x.Menu == menu);
+                //if (MatchingMenuOpen(menu, parentCategory.Menu))
+                //{
+                    //Game.LogTrivial($"Matching menu is open.");
                     PopulateMenu(menu, categoryScroller, 2);
-                }
+                //}
             }
         }
 
@@ -479,9 +482,10 @@ namespace BetterPedInteractions
             menu.Width = width;
         }
 
-        private static bool MatchingMenuOpen(UIMenu menu, ParentCategory parentCategory)
+        private static bool MatchingMenuOpen(UIMenu menu, UIMenu parentCategoryMenu)
         {
-            if ((parentCategory.Group == Settings.Group.Civilian && menu.TitleText.Contains("Civilian")) || (parentCategory.Group == Settings.Group.Cop && menu.TitleText.Contains("Cop")))
+            Game.LogTrivial($"Menu: {menu.TitleText}, Parent Category Menu: {parentCategoryMenu.TitleText}");
+            if (menu == parentCategoryMenu)
             {
                 return true;
             }
