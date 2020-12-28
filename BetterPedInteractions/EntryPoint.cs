@@ -11,11 +11,13 @@ using System.Windows.Forms;
 
 namespace BetterPedInteractions
 {
+    [Obfuscation(Exclude = false, Feature = "-rename", ApplyToMembers = false)]
     internal class EntryPoint
     {
         internal static List<CollectedPed> CollectedPeds = new List<CollectedPed>();
         internal static CollectedPed FocusedPed = null;
 
+        [Obfuscation(Exclude = false, Feature = "-rename")]
         public static void Main()
         {
             AppDomain.CurrentDomain.DomainUnload += MyTerminationHandler;
