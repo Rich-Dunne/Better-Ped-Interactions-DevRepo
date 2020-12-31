@@ -27,9 +27,9 @@ namespace BetterPedInteractions
         {
             _parentCategories = menuCategoryObjects;
             ResponseManager.AssignInteractions(_parentCategories);
-
             BuildCivMenu();
             BuildCopMenu();
+            HighlightTracker();
 
             void BuildCivMenu()
             {
@@ -38,7 +38,7 @@ namespace BetterPedInteractions
 
 
                 var allMenuItems = GetAllMenuItems(Settings.Group.Civilian);
-                allMenuItems.ForEach(x => x.Category.Menu = CivMenu);
+                allMenuItems.ForEach(x => x.ParentCategory.Menu = CivMenu);
                 //allMenuItems.ForEach(x => Game.LogTrivial($"Menu Item: {x.MenuPrompt.Value}, Category: {x.Category.Name.Value}, Menu: {x.Category.Menu.TitleText}"));
 
                 var civCategories = _parentCategories.Where(x => x.Group == Settings.Group.Civilian).Distinct().ToList();
@@ -120,7 +120,7 @@ namespace BetterPedInteractions
                 MenuPool.Add(CopMenu);
 
                 var allMenuItems = GetAllMenuItems(Settings.Group.Cop);
-                allMenuItems.ForEach(x => x.Category.Menu = CopMenu);
+                allMenuItems.ForEach(x => x.ParentCategory.Menu = CopMenu);
                 //allMenuItems.ForEach(x => Game.LogTrivial($"Menu Item: {x.MenuPrompt.Value}, Category: {x.Category.Name.Value}, Menu: {x.Category.Menu.TitleText}"));
 
                 var copCategories = _parentCategories.Where(x => x.Group == Settings.Group.Cop).Distinct().ToList();
@@ -178,6 +178,7 @@ namespace BetterPedInteractions
 
         internal static void PopulateMenu(UIMenu menu, UIMenuListScrollerItem<string> categoryScroller, int removeItemIndex = 1)
         {
+
             // First I need to clear the menu because this method will be used for refreshing menu items
             while (menu.MenuItems.Count > removeItemIndex)
             {
@@ -191,7 +192,7 @@ namespace BetterPedInteractions
                 Game.LogTrivial($"Parent category is null.");
                 return;
             }
-            //Game.LogTrivial($"Parent category: {parentCategory.Name.Value}");
+
             // Then, I need to check if the parent category has sub categories
             // If there are any sub categories, I need to add their names to the submenu scroller menu item
             var subCategories = parentCategory.SubCategories;
@@ -232,6 +233,11 @@ namespace BetterPedInteractions
                     {
                         //Game.LogTrivial($"[MENU ADD] Menu: {menuCategoryObject.Menu}, Category: {menuCategoryObject.Name.Value}, Prompt: {menuItem.MenuPrompt.Value}");
                         menu.AddItem(_DialogueItem = new UIMenuItem(menuItem.MenuPrompt.Value));
+                        // Need to only add the star on meny items recently enabled.  Remove badge when highlighted.
+                        if (!menuItem.Highlighted)
+                        {
+                            _DialogueItem.LeftBadge = UIMenuItem.BadgeStyle.Star;
+                        }
                         AssignFontColorFromAttribute(menuItem, _DialogueItem);
                     }
                 }
@@ -242,19 +248,34 @@ namespace BetterPedInteractions
 
             void AddPedActionsToMenu()
             {
-                var allCivMenuItems = GetAllMenuItems(Settings.Group.Civilian);
-                var civActionItems = allCivMenuItems.Where(x => x.MenuPrompt.Attribute("action") != null).Distinct().ToList();
-                AssignActionsToMenuItems(civActionItems);
-                var allCopMenuItems = GetAllMenuItems(Settings.Group.Cop);
-                var copActionItems = allCivMenuItems.Where(x => x.MenuPrompt.Attribute("action") != null).Distinct().ToList();
-                AssignActionsToMenuItems(copActionItems);
-            }
+                //var allCivMenuItems = GetAllMenuItems(Settings.Group.Civilian);
+                //var civActionItems = allCivMenuItems.Where(x => x.MenuPrompt.Attribute("action") != null).Distinct().ToList();
+                //AssignActionsToMenuItems(civActionItems);
+                //var allCopMenuItems = GetAllMenuItems(Settings.Group.Cop);
+                //var copActionItems = allCivMenuItems.Where(x => x.MenuPrompt.Attribute("action") != null).Distinct().ToList();
+                //AssignActionsToMenuItems(copActionItems);
 
-            void AssignActionsToMenuItems(List<MenuItem> menuItems)
-            {
-                foreach (MenuItem menuItem in menuItems)
+                IEnumerable<MenuItem> promptsMatchingCategoryLevel;
+                if (menu.MenuItems.Count > 1 && subCategories.Count > 0 && _subMenuScroller.OptionCount > 0)
                 {
-                    Game.LogTrivial($"Adding action to {menuItem.MenuPrompt.Value}");
+                    //Game.LogTrivial($"Subscroller selected item: {_subMenuScroller.SelectedItem}");
+                    var matchingSubCategory = subCategories.FirstOrDefault(x => _subMenuScroller.SelectedItem == x.Name.Value);
+                    //Game.LogTrivial($"Possible prompts: {promptsMatchingReadLevel.Count()}");
+                    if (matchingSubCategory == null)
+                    {
+                        Game.LogTrivial($"Matching sub category is null.");
+                        return;
+                    }
+                    promptsMatchingCategoryLevel = matchingSubCategory.MenuItems.Where(x => x.Level <= matchingSubCategory.Level);
+                }
+                else
+                {
+                    promptsMatchingCategoryLevel = parentCategory.MenuItems.Where(x => x.Level <= parentCategory.Level);
+                }
+
+                foreach (MenuItem menuItem in promptsMatchingCategoryLevel.Where(x => x.Enabled && x.MenuPrompt != null))
+                {
+                    //Game.LogTrivial($"[MENU ADD] Menu: {menuCategoryObject.Menu}, Category: {menuCategoryObject.Name.Value}, Prompt: {menuItem.MenuPrompt.Value}");
                     if (menuItem.MenuPrompt.Attribute("action").Value == "follow")
                     {
                         menu.AddItem(_FollowMe);
@@ -289,13 +310,56 @@ namespace BetterPedInteractions
                         Actions.Add(menuItem);
                     }
                     AssignFontColorFromAttribute(menuItem, menuItem.Action);
+
+                }
+            }
+
+            void AssignActionsToMenuItems(List<MenuItem> menuItems)
+            {
+                foreach (MenuItem menuItem in menuItems)
+                {
+                    //Game.LogTrivial($"Adding action to {menuItem.MenuPrompt.Value}");
+                    //if (menuItem.MenuPrompt.Attribute("action").Value == "follow")
+                    //{
+                    //    menu.AddItem(_FollowMe);
+                    //    menuItem.Action = _FollowMe;
+                    //    Actions.Add(menuItem);
+                    //}
+                    //if (menuItem.MenuPrompt.Attribute("action").Value == "dismiss")
+                    //{
+                    //    menu.AddItem(_Dismiss);
+                    //    menuItem.Action = _Dismiss;
+                    //    Actions.Add(menuItem);
+                    //}
+                    //if (menuItem.MenuPrompt.Attribute("action").Value == "rollWindowDown")
+                    //{
+                    //    _RollWindowDown = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Rolls down the ped's window");
+                    //    menu.AddItem(_RollWindowDown);
+                    //    menuItem.Action = _RollWindowDown;
+                    //    Actions.Add(menuItem);
+                    //}
+                    //if (menuItem.MenuPrompt.Attribute("action").Value == "turnOffEngine")
+                    //{
+                    //    _TurnOffEngine = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Makes ped turn off the engine");
+                    //    menu.AddItem(_TurnOffEngine);
+                    //    menuItem.Action = _TurnOffEngine;
+                    //    Actions.Add(menuItem);
+                    //}
+                    //if (menuItem.MenuPrompt.Attribute("action").Value == "exitVehicle")
+                    //{
+                    //    _ExitVehicle = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Makes ped exit the vehicle");
+                    //    menu.AddItem(_ExitVehicle);
+                    //    menuItem.Action = _ExitVehicle;
+                    //    Actions.Add(menuItem);
+                    //}
+                    AssignFontColorFromAttribute(menuItem, menuItem.Action);
                 }
             }
 
             void CreateSubCategoryScroller()
             {
                 _subCategoryNames.Clear();
-                _subCategoryNames = subCategories.Where(x => x.Enabled && x.MenuItems.Any(y => y.Enabled)).Select(z => z.Name.Value).ToList();
+                _subCategoryNames = subCategories.Where(x => x.Enabled && x.MenuItems.Any(y => y.Enabled)).Select(z => z.Name.Value).Distinct().ToList();
                 _subMenuScroller.Items.Clear();
                 _subMenuScroller.Items = _subCategoryNames;
                 menu.AddItem(_subMenuScroller, 1);
@@ -390,11 +454,7 @@ namespace BetterPedInteractions
                     menu.RemoveItemAt(2);
                 }
                 var parentCategory = _parentCategories.FirstOrDefault(x => x.Name.Value == categoryScroller.OptionText && x.Menu == menu);
-                //if (MatchingMenuOpen(menu, parentCategory.Menu))
-                //{
-                    //Game.LogTrivial($"Matching menu is open.");
-                    PopulateMenu(menu, categoryScroller, 2);
-                //}
+                PopulateMenu(menu, categoryScroller, 2);
             }
         }
 
@@ -494,6 +554,44 @@ namespace BetterPedInteractions
             var subCategoryMenuItems = subCategories.SelectMany(x => x.MenuItems).ToList();
             allMenuItems.AddRange(subCategoryMenuItems);
             return allMenuItems;
+        }
+
+        private static void HighlightTracker()
+        {
+            GameFiber.StartNew(() =>
+            {
+                while (true)
+                {
+                    if(CivMenu.Visible)
+                    {
+                        foreach(UIMenuItem menuItem in CivMenu.MenuItems)
+                        {
+                            if(menuItem.Selected && menuItem.LeftBadge != UIMenuItem.BadgeStyle.None)
+                            {
+                                menuItem.LeftBadge = UIMenuItem.BadgeStyle.None;
+                                var allMenuItems = GetAllMenuItems(Settings.Group.Civilian);
+                                var selectedItem = allMenuItems.FirstOrDefault(x => x.MenuPrompt.Value == menuItem.Text);
+                                selectedItem.Highlighted = true;
+                            }
+                        }
+                    }
+                    else if (CopMenu.Visible)
+                    {
+                        foreach (UIMenuItem menuItem in CopMenu.MenuItems)
+                        {
+                            if (menuItem.Selected && menuItem.LeftBadge != UIMenuItem.BadgeStyle.None)
+                            {
+                                menuItem.LeftBadge = UIMenuItem.BadgeStyle.None;
+                                menuItem.LeftBadge = UIMenuItem.BadgeStyle.None;
+                                var allMenuItems = GetAllMenuItems(Settings.Group.Cop);
+                                var selectedItem = allMenuItems.FirstOrDefault(x => x.MenuPrompt.Value == menuItem.Text);
+                                selectedItem.Highlighted = true;
+                            }
+                        }
+                    }
+                    GameFiber.Yield();
+                }
+            }, "Menu Item Highlight Tracker");
         }
     }
 }
