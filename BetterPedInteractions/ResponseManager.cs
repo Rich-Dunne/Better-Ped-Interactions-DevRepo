@@ -34,10 +34,10 @@ namespace BetterPedInteractions
 
             MenuItem GetMatchingPrompt()
             {
-                var prompt = allMenuItems.FirstOrDefault(x => (x.MenuPrompt?.Value == heardPrompt || x.AudioPrompts.Contains(heardPrompt)) && x.Category.GetType() == typeof(ParentCategory));
+                var prompt = allMenuItems.FirstOrDefault(x => (x.MenuPrompt?.Value == heardPrompt || x.AudioPrompts.Contains(heardPrompt)) && !x.HasSubCategory);
                 if (prompt == null)
                 {
-                    prompt = allMenuItems.FirstOrDefault(x => (x.MenuPrompt?.Value == heardPrompt || x.AudioPrompts.Contains(heardPrompt)) && x.Category.GetType() == typeof(SubCategory));
+                    prompt = allMenuItems.FirstOrDefault(x => (x.MenuPrompt?.Value == heardPrompt || x.AudioPrompts.Contains(heardPrompt)) && x.HasSubCategory);
                 }
                 return prompt != null ? prompt : null;
             }
@@ -63,11 +63,11 @@ namespace BetterPedInteractions
                 // If the second menu item was not a scroller, then we need to get response from primary category menu items, else we need to get it from subcategory menu items
                 if (menu.MenuItems[1].GetType() != typeof(UIMenuListScrollerItem<string>))
                 {
-                    return allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() == typeof(ParentCategory));
+                    return allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == selectedItem.Text && !x.HasSubCategory);
                 }
                 else
                 {
-                    return allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == selectedItem.Text && x.Category.GetType() == typeof(SubCategory));
+                    return allMenuItems.FirstOrDefault(x => x.MenuPrompt?.Value == selectedItem.Text && x.HasSubCategory);
                 }
             }
         }
@@ -82,12 +82,16 @@ namespace BetterPedInteractions
 
             void IncrementCategoryLevel()
             {
-                if (matchingPrompt.Level == matchingPrompt.Category.Level)
+                if(matchingPrompt.HasSubCategory && matchingPrompt.Level == matchingPrompt.SubCategory.Level)
                 {
                     //Game.LogTrivial($"Category level being incremented: {matchingPrompt.Category.Name.Value}");
                     //Game.LogTrivial($"Level before: {matchingPrompt.Category.ReadLevel}");
-                    matchingPrompt.Category.Level++;
+                    matchingPrompt.SubCategory.Level++;
                     //Game.LogTrivial($"Level after: {matchingPrompt.Category.ReadLevel}");
+                }
+                else if (matchingPrompt.Level == matchingPrompt.ParentCategory.Level)
+                {
+                    matchingPrompt.ParentCategory.Level++;
                 }
             }
 
@@ -167,14 +171,14 @@ namespace BetterPedInteractions
                 AdjustPedAgitation();
             }
             // Need to populate menu here or in VocalInterface
-            Game.LogTrivial($"Item is from menu: {prompt.Category.Menu.TitleText}");
-            if (prompt.Category.Menu == MenuManager.CivMenu)
+            //Game.LogTrivial($"Item is from menu: {prompt.ParentCategory.Menu.TitleText}");
+            if (prompt.ParentCategory.Menu == MenuManager.CivMenu)
             {
-                MenuManager.PopulateMenu(prompt.Category.Menu, MenuManager.CivParentCategoryScroller);
+                MenuManager.PopulateMenu(prompt.ParentCategory.Menu, MenuManager.CivParentCategoryScroller);
             }
-            else if (prompt.Category.Menu == MenuManager.CopMenu)
+            else if (prompt.ParentCategory.Menu == MenuManager.CopMenu)
             {
-                MenuManager.PopulateMenu(prompt.Category.Menu, MenuManager.CopParentCategoryScroller);
+                MenuManager.PopulateMenu(prompt.ParentCategory.Menu, MenuManager.CopParentCategoryScroller);
             }
 
             void GetResponse()
@@ -275,7 +279,7 @@ namespace BetterPedInteractions
 
             void NotifyPlayerOfNewDialoguePathOptions(List<MenuItem> newDialogueOptions)
             {
-                var updatedCategories = newDialogueOptions.Select(x => x.Category).Distinct();
+                var updatedCategories = newDialogueOptions.Select(x => x.ParentCategory).Distinct();
                 string updatedCategoriesString = "";
                 foreach (Category category in updatedCategories)
                 {
@@ -293,13 +297,20 @@ namespace BetterPedInteractions
                 if (prompt.Element.Attribute("enablesCategory") != null)
                 {
                     var allMenuItems = GetAllMenuItems();
-                    var categoriesToBeEnabled = allMenuItems.Where(x => x.Category.Name.Value == prompt.Element.Attribute("enablesCategory").Value && x.Category.File == prompt.Category.File).Select(y => y.Category).Distinct();
+                    var menuItemsWithCategoriesToEnable = allMenuItems.Where(x => (x.ParentCategory.Name.Value == prompt.Element.Attribute("enablesCategory").Value || x.SubCategory?.Name.Value == prompt.Element.Attribute("enablesCategory").Value) && x.ParentCategory.File == prompt.ParentCategory.File).Distinct();
+                    var parentCategoriesToEnable = menuItemsWithCategoriesToEnable.Where(x => !x.ParentCategory.Enabled).Select(x => x.ParentCategory).ToList();
+                    var subCategoriesToEnable = menuItemsWithCategoriesToEnable.Where(x => x.SubCategory != null && !x.SubCategory.Enabled).Select(x => x.SubCategory).ToList();
                     //Game.LogTrivial($"Categories to be enabled: {categoriesToBeEnabled.Count()}");
-                    foreach(Category category in categoriesToBeEnabled)
+                    foreach(ParentCategory parentCategory in parentCategoriesToEnable)
                     {
                         //Game.LogTrivial($"Category: {category.Name.Value}, File: {category.File}");
-                        category.Enabled = true;
-                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nCategory unlocked with new dialogue options: ~b~{category.Name.Value} [{category.Menu.TitleText}]~w~.");
+                        parentCategory.Enabled = true;
+                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nCategory unlocked with new dialogue options: ~b~{parentCategory.Name.Value} [{parentCategory.Menu.TitleText}]~w~.");
+                    }
+                    foreach(SubCategory subCategory in subCategoriesToEnable)
+                    {
+                        subCategory.Enabled = true;
+                        Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nSub Category unlocked with new dialogue options: ~b~{subCategory.Name.Value} [{subCategory.ParentCategory.Menu.TitleText}]~w~.");
                     }
                 }
             }
