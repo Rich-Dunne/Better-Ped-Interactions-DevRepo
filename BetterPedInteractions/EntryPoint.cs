@@ -11,12 +11,11 @@ using System.Windows.Forms;
 
 namespace BetterPedInteractions
 {
-    [Obfuscation(Exclude = false, Feature = "-rename", ApplyToMembers = false)]
+    [Obfuscation(Exclude = false, Feature = "-rename", ApplyToMembers = true)]
     internal class EntryPoint
     {
         internal static List<CollectedPed> CollectedPeds = new List<CollectedPed>();
         internal static CollectedPed FocusedPed = null;
-
         [Obfuscation(Exclude = false, Feature = "-rename")]
         public static void Main()
         {
@@ -37,16 +36,97 @@ namespace BetterPedInteractions
         private static void LoopForUserInput()
         {
             var menuPool = MenuManager.MenuPool;
-            var copMenu = menuPool.FirstOrDefault(m => m.TitleText == "Cop Interaction Menu");
-            var civMenu = menuPool.FirstOrDefault(m => m.TitleText == "Civilian Interaction Menu");
+            var copMenu = MenuManager.CopMenu;
+            var civMenu = MenuManager.CivMenu;
 
             while (true)
             {
                 CloseMenuIfPlayerTooFar();
                 DisableMenuItems();
+                ToggleAudioCapture();
+                ToggleMenu();
 
+                MenuManager.MenuPool.ProcessMenus();
+
+                GameFiber.Yield();
+            }
+
+            void CloseMenuIfPlayerTooFar()
+            {
+                if (menuPool.IsAnyMenuOpen() && FocusedPed != null && FocusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) > Settings.InteractDistance && !FocusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
+                {
+                    FocusedPed = null;
+                    menuPool.CloseAllMenus();
+                }
+            }
+
+            void DisableMenuItems()
+            {
+                if (!Game.LocalPlayer.Character)
+                {
+                    //Game.LogTrivial($"Player character is null.");
+                    return;
+                }
+                if (FocusedPed == null)
+                {
+                    //Game.LogTrivial($"focusedPed is null.");
+                    return;
+                }
+
+                if (FocusedPed.Ped && FocusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) > Settings.InteractDistance)
+                {
+                    foreach (UIMenuItem item in civMenu.MenuItems)
+                    {
+                        if (item.Text != "Follow me")
+                        {
+                            item.Enabled = false;
+                            item.BackColor = Color.Gray;
+                        }
+                    }
+                }
+                else if (Game.LocalPlayer.Character && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) <= Settings.InteractDistance)
+                {
+                    foreach (UIMenuItem item in civMenu.MenuItems)
+                    {
+                        item.Enabled = true;
+                    }
+                }
+
+                foreach (MenuItem action in MenuManager.Actions.Where(x => x.MenuPrompt.Attribute("action").Value != "follow" && x.MenuPrompt.Attribute("action").Value != "dismiss"))
+                {
+                    if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "On Foot")
+                    {
+                        action.Action.Enabled = true;
+                    }
+                    else if (FocusedPed.Ped && FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "On Foot")
+                    {
+                        action.Action.Enabled = false;
+                    }
+
+                    if (FocusedPed.Ped && FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "In Vehicle")
+                    {
+                        action.Action.Enabled = true;
+                    }
+                    else if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "In Vehicle")
+                    {
+                        action.Action.Enabled = false;
+                    }
+
+                    if (!action.Action.Enabled)
+                    {
+                        action.Action.HighlightedBackColor = Color.White;
+                    }
+                    else
+                    {
+                        action.Action.HighlightedBackColor = action.Action.ForeColor;
+                    }
+                }
+            }
+
+            void ToggleAudioCapture()
+            {
                 // If button pressed, enable or disable persistent audio capture
-                if (VocalInterface.AllowVoiceCapture && 
+                if (VocalInterface.AllowVoiceCapture &&
                     (Settings.SpeechKeyModifier == Keys.None && Game.IsKeyDown(Settings.SpeechKey)) ||
                     (Game.IsKeyDownRightNow(Settings.SpeechKeyModifier) && Game.IsKeyDown(Settings.SpeechKey)) ||
                     (Settings.SpeechButtonModifier == ControllerButtons.None && Game.IsControllerButtonDown(Settings.SpeechButton)) ||
@@ -64,20 +144,20 @@ namespace BetterPedInteractions
                         Game.DisplayNotification($"~o~[Better Ped Interactions]~w~\nAudio capture ~o~ended~w~.");
                     }
                 }
+            }
 
+            void ToggleMenu()
+            {
                 if (Game.LocalPlayer.Character.IsOnFoot)
                 {
-                    if ((Settings.ModifierKey == Keys.None && Game.IsKeyDown(Settings.ToggleKey)) || 
-                        (Game.IsKeyDownRightNow(Settings.ModifierKey) && Game.IsKeyDown(Settings.ToggleKey)) || 
-                        (Settings.ModifierButton == ControllerButtons.None && Game.IsControllerButtonDown(Settings.ToggleButton)) || 
+                    if ((Settings.ModifierKey == Keys.None && Game.IsKeyDown(Settings.ToggleKey)) ||
+                        (Game.IsKeyDownRightNow(Settings.ModifierKey) && Game.IsKeyDown(Settings.ToggleKey)) ||
+                        (Settings.ModifierButton == ControllerButtons.None && Game.IsControllerButtonDown(Settings.ToggleButton)) ||
                         (Game.IsControllerButtonDownRightNow(Settings.ModifierButton) && Game.IsControllerButtonDown(Settings.ToggleButton)))
                     {
                         DisplayMenuForNearbyPed();
                     }
                 }
-                MenuManager.MenuPool.ProcessMenus();
-
-                GameFiber.Yield();
             }
 
             void DisplayMenuForNearbyPed()
@@ -99,90 +179,18 @@ namespace BetterPedInteractions
                 }
             }
 
-            void CloseMenuIfPlayerTooFar()
+            Ped GetNearbyPed()
             {
-                if (menuPool.IsAnyMenuOpen() && FocusedPed != null && FocusedPed.Ped && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) > Settings.InteractDistance && !FocusedPed.Following || !Game.LocalPlayer.Character || !Game.LocalPlayer.Character.IsAlive)
+                var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
+                if (!nearbyPed)
                 {
-                    FocusedPed = null;
-                    menuPool.CloseAllMenus();
+                    //Game.LogTrivial($"nearbyPed is null.");
+                    return null;
                 }
-            }
-
-            void DisableMenuItems()
-            {
-                if (!Game.LocalPlayer.Character)
+                else
                 {
-                    //Game.LogTrivial($"Player character is null.");
-                    return;
+                    return nearbyPed;
                 }
-                if(FocusedPed == null)
-                {
-                    //Game.LogTrivial($"focusedPed is null.");
-                    return;
-                }
-
-                if(FocusedPed.Ped && FocusedPed.Following && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) > Settings.InteractDistance)
-                {
-                    foreach(UIMenuItem item in civMenu.MenuItems)
-                    {
-                        if(item.Text != "Follow me")
-                        {
-                            item.Enabled = false;
-                            item.BackColor = Color.Gray;
-                        }
-                    }
-                }
-                else if(Game.LocalPlayer.Character && Game.LocalPlayer.Character.DistanceTo2D(FocusedPed.Ped) <= Settings.InteractDistance)
-                {
-                    foreach (UIMenuItem item in civMenu.MenuItems)
-                    {
-                        item.Enabled = true;
-                    }
-                }
-
-                foreach(MenuItem action in MenuManager.Actions.Where(x => x.MenuPrompt.Attribute("action").Value != "follow" && x.MenuPrompt.Attribute("action").Value != "dismiss"))
-                {
-                    if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "On Foot")
-                    {
-                        action.Action.Enabled = true;
-                    }
-                    else if (FocusedPed.Ped && FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "On Foot")
-                    {
-                        action.Action.Enabled = false;
-                    }
-
-                    if (FocusedPed.Ped && FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "In Vehicle")
-                    {
-                        action.Action.Enabled = true;
-                    }
-                    else if (FocusedPed.Ped && !FocusedPed.Ped.CurrentVehicle && action.Category.Name.Value == "In Vehicle")
-                    {
-                        action.Action.Enabled = false;
-                    }
-
-                    if (!action.Action.Enabled)
-                    {
-                        action.Action.HighlightedBackColor = Color.White;
-                    }
-                    else
-                    {
-                        action.Action.HighlightedBackColor = action.Action.ForeColor;
-                    }
-                }
-            }
-        }
-
-        internal static Ped GetNearbyPed()
-        {
-            var nearbyPed = Game.LocalPlayer.Character.GetNearbyPeds(16).Where(p => p && p != Game.LocalPlayer.Character && p.IsAlive && p.DistanceTo2D(Game.LocalPlayer.Character) <= Settings.InteractDistance).OrderBy(p => p.DistanceTo2D(Game.LocalPlayer.Character)).FirstOrDefault();
-            if (!nearbyPed)
-            {
-                //Game.LogTrivial($"nearbyPed is null.");
-                return null;
-            }
-            else
-            {
-                return nearbyPed;
             }
         }
 
@@ -198,6 +206,7 @@ namespace BetterPedInteractions
             if (collectedPed == null && (nearbyPed.RelationshipGroup == RelationshipGroup.Cop || nearbyPed.RelationshipGroup == "UBCOP" || nearbyPed.Model.Name == "MP_M_FREEMODE_01" || nearbyPed.Model.Name.Contains("COP")))
             {
                 Game.LogTrivial($"CollectedPed is null, collecting nearby COP and assigning as focusedPed.");
+                //nearbyPed = new CollectedPed(); Preparing to use inheritence for CollectedPed
                 FocusedPed = CollectPed(nearbyPed, Settings.Group.Cop);
             }
             else if (collectedPed == null)
