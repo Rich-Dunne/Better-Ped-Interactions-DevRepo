@@ -34,67 +34,71 @@ namespace BetterPedInteractions
                     //Game.LogTrivial($"Categories: {menuCategories.Count()}");
 
                     // For each menu category in the file
-                    foreach(XElement category in menuCategories)
+                    foreach(XElement parentCategory in menuCategories)
                     {
-                        // Create new MenuCategory object
-                        var newMenuCategory = new ParentCategory(category.Element("CategoryName"), group, Path.GetFileNameWithoutExtension(file));
+                        // Create new ParentCategory
+                        var newParentCategory = new ParentCategory(parentCategory.Element("CategoryName"), group, Path.GetFileNameWithoutExtension(file));
                         //Game.LogTrivial($"Parent category file: {newMenuCategory.File}");
                         // Check for submenus
-                        if (category.Elements("SubCategory").Any())
+                        if (parentCategory.Elements("SubCategory").Any())
                         {
                             //Game.LogTrivial($"Sub categories: {category.Elements("SubCategory").Count()}");
-                            foreach (XElement categoryType in category.Elements("SubCategory"))
+                            foreach (XElement subCategory in parentCategory.Elements("SubCategory"))
                             {
-                                var newSubCategory = new SubCategory(categoryType.Element("CategoryName"), newMenuCategory, Path.GetFileNameWithoutExtension(file));
-                                //Game.LogTrivial($"Sub Category file: {newSubCategory.File}");
-                                if(categoryType.Attribute("enableByDefault") != null)
+                                var newSubCategory = new SubCategory(subCategory.Element("CategoryName"), newParentCategory);
+                                if(subCategory.Attribute("enableByDefault") != null)
                                 {
-                                    newSubCategory.Enabled = bool.Parse(categoryType.Attribute("enableByDefault").Value);
+                                    newSubCategory.Enabled = bool.Parse(subCategory.Attribute("enableByDefault").Value);
+                                    //Game.LogTrivial($"Sub category [{newSubCategory.Name.Value}] enabled: {newSubCategory.Enabled}");
                                 }
-                                //Game.LogTrivial($"--Sub category: {newSubCategory.Name.Value}");
-                                newSubCategory.MenuItems = CompileMenuItems(newSubCategory, categoryType);
-                                newMenuCategory.SubCategories.Add(newSubCategory);
+                                //Game.LogTrivial($"Sub category: {newSubCategory.Name.Value}");
+                                CompileMenuItems(subCategory, newParentCategory, newSubCategory);
+                                newParentCategory.SubCategories.Add(newSubCategory);
                             }
                         }
                         else
                         {
-                            newMenuCategory.MenuItems = CompileMenuItems(newMenuCategory, category);
+                            CompileMenuItems(parentCategory, newParentCategory);
                         }
-                        menuCategoryObjects.Add(newMenuCategory);
+                        menuCategoryObjects.Add(newParentCategory);
                     }
                 }
             }
         }
 
-        private static List<MenuItem> CompileMenuItems(Category category, XElement categoryType)
+        private static void CompileMenuItems(XElement category, ParentCategory parentCategory = null, SubCategory subCategory = null)
         {
-            IEnumerable<XElement> menuItems;
-            //Game.LogTrivial($"Category Type: {categoryType.Name}");
-            //Game.LogTrivial($"Category Name: {category.Name.Value}");
-            menuItems = categoryType.Elements("MenuItem");
-
+            //Game.LogTrivial($"Parent category: {parentCategory?.Name.Value}");
+            //Game.LogTrivial($"Sub category: {subCategory?.Name.Value}");
+            var menuItems = category.Elements("MenuItem");
             //Game.LogTrivial($"Menu items: {menuItems.Count()}");
+
             foreach (XElement menuItem in menuItems)
             {
-                var newMenuItem = new MenuItem(menuItem);
-                if(menuItem.Attribute("enableByDefault") != null)
+                MenuItem newMenuItem;
+                if(subCategory != null)
                 {
-                    newMenuItem.Enabled = bool.Parse(menuItem.Attribute("enableByDefault").Value);
-                }
-                if(categoryType.Name == "SubCategory")
-                {
-                    newMenuItem.Category = category as SubCategory;
+                    newMenuItem = new MenuItem(menuItem, subCategory.ParentCategory, subCategory);
+                    newMenuItem.MenuPrompt = menuItem.Element("MenuPrompt");
+                    subCategory.MenuItems.Add(newMenuItem);
+                    //Game.LogTrivial($"Added {newMenuItem.MenuPrompt.Value} to {newMenuItem.SubCategory.Name.Value}");
                 }
                 else
                 {
-                    newMenuItem.Category = category as ParentCategory;
+                    newMenuItem = new MenuItem(menuItem, parentCategory);
+                    newMenuItem.MenuPrompt = menuItem.Element("MenuPrompt");
+                    parentCategory.MenuItems.Add(newMenuItem);
+                    //Game.LogTrivial($"Added {newMenuItem.MenuPrompt.Value} to {newMenuItem.ParentCategory.Name.Value}");
+                }
+                if (menuItem.Attribute("enableByDefault") != null)
+                {
+                    newMenuItem.Enabled = bool.Parse(menuItem.Attribute("enableByDefault").Value);
                 }
                 //Game.LogTrivial($"newMenuItem Category: {newMenuItem.Category.GetType()}");
                 if (menuItem.Element("Level") != null)
                 {
                     newMenuItem.Level = int.Parse(menuItem.Element("Level").Value);
                 }
-                newMenuItem.MenuPrompt = menuItem.Element("MenuPrompt");
                 if(newMenuItem.MenuPrompt != null)
                 {
                     VocalInterface.AudioPrompts.Add(newMenuItem.MenuPrompt.Value);
@@ -107,9 +111,16 @@ namespace BetterPedInteractions
                     audioPrompts.ForEach(x => VocalInterface.AudioPrompts.Add(x.Value));
                 }
                 //Game.LogTrivial($"---Prompt: {newMenuItem.MenuPrompt?.Value}, Level: {newMenuItem.Level}, Responses: {newMenuItem.Responses?.Count()}");
-                category.MenuItems.Add(newMenuItem);
+                //if (subCategory != null)
+                //{
+                //    subCategory.MenuItems.Add(newMenuItem);
+                //}
+                //else
+                //{
+                //    parentCategory.MenuItems.Add(newMenuItem);
+                //}
             }
-            return category.MenuItems;
+            //return category.MenuItems;
         }
     }
 }
