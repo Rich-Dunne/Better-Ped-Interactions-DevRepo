@@ -11,7 +11,6 @@ namespace BetterPedInteractions
         internal static SpeechRecognitionEngine SRE = new SpeechRecognitionEngine(new System.Globalization.CultureInfo(Settings.SpeechLanguage));
         internal static Choices Phrases = new Choices();
         internal static List<string> AudioPrompts = new List<string>();
-        private static SubsetMatchingMode MatchingMode = SubsetMatchingMode.OrderedSubsetContentRequired;
         internal static bool AllowVoiceCapture { get; set; } = false;
         internal static bool CapturingInput { get; set; } = false;
         private static bool SpeechDetected { get; set; } = false;
