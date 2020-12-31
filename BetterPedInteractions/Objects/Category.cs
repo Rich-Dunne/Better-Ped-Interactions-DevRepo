@@ -22,25 +22,8 @@ namespace BetterPedInteractions
 
     class ParentCategory : Category
     {
-        public override string File
-        {
-            get { return base.File; }
-            set
-            {
-                base.File = value;
-            }
-        }
-        public override UIMenu Menu
-        {
-            get { return base.Menu; }
-            set
-            {
-                base.Menu = value;
-            }
-        }
         internal Settings.Group Group { get; set; }
         internal List<SubCategory> SubCategories { get; private set; } = new List<SubCategory>();
-        //internal new List<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
         internal ParentCategory(XElement name, Settings.Group group, string file)
         {
             Name = name;
@@ -53,35 +36,17 @@ namespace BetterPedInteractions
             {
                 Menu = MenuManager.CopMenu;
             }
-            //Menu = menu;
             File = file;
         }
     }
 
     class SubCategory : Category 
     {
-        public override string File
-        {
-            get { return base.File; }
-            set
-            {
-                base.File = value;
-            }
-        }
-        public override UIMenu Menu
-        {
-            get { return base.Menu; }
-            set
-            {
-                base.Menu = value;
-            }
-        }
         internal ParentCategory ParentCategory { get; set; }
-        internal SubCategory(XElement name, ParentCategory parentCategory, string file)
+        internal SubCategory(XElement name, ParentCategory parentCategory)
         {
             Name = name;
             ParentCategory = parentCategory;
-            File = file;
         }
     }
 }
