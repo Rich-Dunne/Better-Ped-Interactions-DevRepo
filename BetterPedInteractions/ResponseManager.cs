@@ -147,18 +147,37 @@ namespace BetterPedInteractions
             void PerformPedAction()
             {
                 // TODO: This currently only works for Follow action, needs to work for every checkbox action
-                if (prompt.Action.GetType() == typeof(UIMenuCheckboxItem))
+                Game.LogTrivial($"Action: {prompt.Action}");
+                switch (prompt.Action) 
                 {
-                    var actionMenuItem = prompt.ParentCategory.Menu.MenuItems.FirstOrDefault(x => x.Text == prompt.Action.Text) as UIMenuCheckboxItem;
-                    actionMenuItem.Checked = !actionMenuItem.Checked;
-                    if (actionMenuItem.Checked)
-                    {
-                        PedHandler.FocusedPed.FollowMe();
-                    }
-                    else
-                    {
-                        PedHandler.FocusedPed.StopFollowing();
-                    }
+                    case Actions.Follow:
+                        var menuItem = prompt.UIMenuItem as UIMenuCheckboxItem;
+                        menuItem.Checked = !menuItem.Checked;
+                        if (menuItem.Checked)
+                        {
+                            PedHandler.FocusedPed.FollowMe();
+                        }
+                        else
+                        {
+                            PedHandler.FocusedPed.StopFollowing();
+                        }
+                        break;
+
+                    case Actions.Dismiss:
+                        PedHandler.FocusedPed.Dismiss();
+                        break;
+
+                    case Actions.RollWindowDown:
+                        PedHandler.FocusedPed.RollDownWindow();
+                        break;
+
+                    case Actions.TurnOffEngine:
+                        PedHandler.FocusedPed.TurnOffEngine();
+                        break;
+
+                    case Actions.ExitVehicle:
+                        PedHandler.FocusedPed.ExitVehicle();
+                        break;
                 }
                 Game.LogTrivial($"Prompt is a ped action.  We don't need a response.");
             }
