@@ -90,6 +90,11 @@ namespace BetterPedInteractions
                     newMenuItem.MenuPrompt = menuItem.Element("MenuPrompt");
                     parentCategory.MenuItems.Add(newMenuItem);
                 }
+                if(menuItem.Attribute("action") != null)
+                {
+                    Enum.TryParse(menuItem.Attribute("action").Value, out Settings.Actions action);
+                    newMenuItem.Action = action;
+                }
                 if (menuItem.Attribute("enableByDefault") != null)
                 {
                     newMenuItem.Enabled = bool.Parse(menuItem.Attribute("enableByDefault").Value);
