@@ -332,12 +332,14 @@ namespace BetterPedInteractions.Objects
         {
             Ped.Tasks.FollowToOffsetFromEntity(Game.LocalPlayer.Character, 1.5f * Vector3.WorldSouth);
             Following = true;
+            Game.LogTrivial($"{Ped.Model.Name} following player.");
         }
 
         internal void StopFollowing()
         {
             Ped.Tasks.Clear();
             Following = false;
+            Game.LogTrivial($"{Ped.Model.Name} following player.");
         }
 
         internal void TurnOffEngine()
