@@ -9,7 +9,7 @@ namespace BetterPedInteractions
         internal XElement Element { get; set; }
         internal ParentCategory ParentCategory { get; set; }
         internal SubCategory SubCategory { get; set; }
-        internal bool HasSubCategory { get; private set; } = false;
+        internal bool BelongsToSubCategory { get; private set; } = false;
         internal bool Enabled { get; set; } = true;
         internal int Level { get; set; } = 1;
         internal XElement MenuPrompt { get; set; }
@@ -23,10 +23,7 @@ namespace BetterPedInteractions
             Element = element;
             ParentCategory = subCategory != null ? subCategory.ParentCategory : parentCategory;
             SubCategory = subCategory;
-            if(subCategory != null)
-            {
-                HasSubCategory = true;
-            }
+            BelongsToSubCategory = subCategory != null ? true : false;
         }
     }
 }
