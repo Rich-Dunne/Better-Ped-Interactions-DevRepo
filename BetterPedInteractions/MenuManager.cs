@@ -271,8 +271,13 @@ namespace BetterPedInteractions
 
             void AddPedActionsToMenu(IEnumerable<MenuItem> actions)
             {
+                UIMenuListScrollerItem<string> subCategory = null;
+                if(subCategories.Count > 0)
+                {
+                    subCategory = menu.MenuItems[1] as UIMenuListScrollerItem<string>;
+                }
                 Actions.Clear();
-                foreach (MenuItem menuItem in actions?.Where(x => x.Enabled && x.MenuPrompt != null && x.MenuPrompt.Attribute("action") != null))
+                foreach (MenuItem menuItem in actions?.Where(x => x.Enabled && x.MenuPrompt != null && x.MenuPrompt.Attribute("action") != null && x.SubCategory.Name.Value == subCategory?.OptionText))
                 {
                     if (menuItem.MenuPrompt.Attribute("action").Value == "Follow")
                     {
@@ -282,37 +287,37 @@ namespace BetterPedInteractions
                             followingActionBool = PedHandler.FocusedPed.Following;
                         }
                         FollowMeAction = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, followingActionBool, "Makes the ped follow the player");
-                        menu.AddItem(FollowMeAction);
                         menuItem.Action = Settings.Actions.Follow;
                         menuItem.UIMenuItem = FollowMeAction;
+                        menu.AddItem(FollowMeAction);
                     }
                     if (menuItem.MenuPrompt.Attribute("action").Value == "Dismiss")
                     {
                         DismissAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Dismisses the focused ped.");
-                        menu.AddItem(DismissAction);
                         menuItem.Action = Settings.Actions.Dismiss;
                         menuItem.UIMenuItem = DismissAction;
+                        menu.AddItem(DismissAction);
                     }
                     if (menuItem.MenuPrompt.Attribute("action").Value == "RollWindowDown")
                     {
                         RollDownWindowAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes the ped roll down their window");
-                        menu.AddItem(RollDownWindowAction);
                         menuItem.Action = Settings.Actions.RollWindowDown;
                         menuItem.UIMenuItem = RollDownWindowAction;
+                        menu.AddItem(RollDownWindowAction);
                     }
                     if (menuItem.MenuPrompt.Attribute("action").Value == "TurnOffEngine")
                     {
                         TurnOffEngineAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped turn off the engine");
-                        menu.AddItem(TurnOffEngineAction);
                         menuItem.Action = Settings.Actions.TurnOffEngine;
                         menuItem.UIMenuItem = TurnOffEngineAction;
+                        menu.AddItem(TurnOffEngineAction);
                     }
                     if (menuItem.MenuPrompt.Attribute("action").Value == "ExitVehicle")
                     {
                         ExitVehicleAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped exit the vehicle");
-                        menu.AddItem(ExitVehicleAction);
                         menuItem.Action = Settings.Actions.ExitVehicle;
                         menuItem.UIMenuItem = ExitVehicleAction;
+                        menu.AddItem(ExitVehicleAction);
                     }
                     Actions.Add(menuItem);
                     AssignFontColorFromAttribute(menuItem, menuItem.UIMenuItem);
@@ -324,12 +329,12 @@ namespace BetterPedInteractions
             {
                 if (!Game.LocalPlayer.Character)
                 {
-                    //Game.LogTrivial($"Player character is null.");
+                    Game.LogTrivial($"Player character is null.");
                     return;
                 }
                 if (PedHandler.FocusedPed == null)
                 {
-                    //Game.LogTrivial($"focusedPed is null.");
+                    Game.LogTrivial($"focusedPed is null.");
                     return;
                 }
 
@@ -608,7 +613,6 @@ namespace BetterPedInteractions
 
             if (scroller == menu.MenuItems[1])
             {
-                //Game.LogTrivial($"Scrolled {scroller.Text}");
                 ScrollSubMenu();
             }
             SetMenuWidth(menu);
