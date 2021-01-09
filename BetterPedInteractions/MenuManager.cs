@@ -22,7 +22,7 @@ namespace BetterPedInteractions
         private static UIMenuListScrollerItem<string> SubMenuScroller { get; set; } = new UIMenuListScrollerItem<string>("Sub Category", "", SubCategoryNames);
         private static int SavedSubMenuIndex { get; set; } = 0;
         private static UIMenuItem DialogueItem { get; set; }
-        internal static UIMenuItem RollWindowDownAction { get; set; }
+        internal static UIMenuItem RollDownWindowAction { get; set; }
         internal static UIMenuItem ExitVehicleAction { get; set; }
         internal static UIMenuItem TurnOffEngineAction { get; set; }
         internal static UIMenuItem DismissAction { get; set; }
@@ -62,39 +62,44 @@ namespace BetterPedInteractions
             //foreach (MenuItem menuItem in GetAllMenuItems()?.Where(x => x.MenuPrompt != null && x.MenuPrompt.Attribute("action") != null))
             {
                 Game.LogTrivial($"Assigning action for {menuItem.MenuPrompt.Value}");
-                if (menuItem.MenuPrompt.Attribute("action").Value == "follow")
+                if (menuItem.MenuPrompt.Attribute("action").Value == "Follow")
                 {
                     FollowMeAction = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Makes the ped follow the player");
                     Actions.Add(menuItem);
-                    menuItem.Action = FollowMeAction;
+                    menuItem.Action = Settings.Actions.Follow;
+                    menuItem.UIMenuItem = FollowMeAction;
                     continue;
                 }
-                if (menuItem.MenuPrompt.Attribute("action").Value == "dismiss")
+                if (menuItem.MenuPrompt.Attribute("action").Value == "Dismiss")
                 {
                     DismissAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Dismisses the focused ped.");
                     Actions.Add(menuItem);
-                    menuItem.Action = DismissAction;
+                    menuItem.Action = Settings.Actions.Dismiss;
+                    menuItem.UIMenuItem = DismissAction;
                     continue;
                 }
-                if (menuItem.MenuPrompt.Attribute("action").Value == "rollWindowDown")
+                if (menuItem.MenuPrompt.Attribute("action").Value == "RollWindowDown")
                 {
-                    RollWindowDownAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes the ped roll down their window");
+                    RollDownWindowAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes the ped roll down their window");
                     Actions.Add(menuItem);
-                    menuItem.Action = RollWindowDownAction;
+                    menuItem.Action = Settings.Actions.RollWindowDown;
+                    menuItem.UIMenuItem = RollDownWindowAction;
                     continue;
                 }
-                if (menuItem.MenuPrompt.Attribute("action").Value == "turnOffEngine")
+                if (menuItem.MenuPrompt.Attribute("action").Value == "TurnOffEngine")
                 {
                     TurnOffEngineAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped turn off the engine");
                     Actions.Add(menuItem);
-                    menuItem.Action = TurnOffEngineAction;
+                    menuItem.Action = Settings.Actions.TurnOffEngine;
+                    menuItem.UIMenuItem = TurnOffEngineAction;
                     continue;
                 }
-                if (menuItem.MenuPrompt.Attribute("action").Value == "exitVehicle")
+                if (menuItem.MenuPrompt.Attribute("action").Value == "ExitVehicle")
                 {
                     ExitVehicleAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped exit the vehicle");
                     Actions.Add(menuItem);
-                    menuItem.Action = ExitVehicleAction;
+                    menuItem.Action = Settings.Actions.ExitVehicle;
+                    menuItem.UIMenuItem = ExitVehicleAction;
                     continue;
                 }
             }
@@ -214,7 +219,8 @@ namespace BetterPedInteractions
             IEnumerable<MenuItem> prompts = GetPromptsMatchingCategoryLevel(); ;
             if (categoryScroller.SelectedItem == "Ped Actions")
             {
-                AddPedActionsToMenu();
+                var actions = parentCategory.SubCategories.SelectMany(x => x.MenuItems);
+                AddPedActionsToMenu(actions);
                 DisableIrrelevantActions();
             }
             else
@@ -263,12 +269,12 @@ namespace BetterPedInteractions
                 }
             }
 
-            void AddPedActionsToMenu()
+            void AddPedActionsToMenu(IEnumerable<MenuItem> actions)
             {
                 Actions.Clear();
-                foreach (MenuItem menuItem in prompts?.Where(x => x.Enabled && x.MenuPrompt != null && x.MenuPrompt.Attribute("action") != null))
+                foreach (MenuItem menuItem in actions?.Where(x => x.Enabled && x.MenuPrompt != null && x.MenuPrompt.Attribute("action") != null))
                 {
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "follow")
+                    if (menuItem.MenuPrompt.Attribute("action").Value == "Follow")
                     {
                         bool followingActionBool = false;
                         if(PedHandler.FocusedPed != null)
@@ -277,35 +283,41 @@ namespace BetterPedInteractions
                         }
                         FollowMeAction = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, followingActionBool, "Makes the ped follow the player");
                         menu.AddItem(FollowMeAction);
-                        menuItem.Action = FollowMeAction;
+                        menuItem.Action = Settings.Actions.Follow;
+                        menuItem.UIMenuItem = FollowMeAction;
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "dismiss")
+                    if (menuItem.MenuPrompt.Attribute("action").Value == "Dismiss")
                     {
                         DismissAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Dismisses the focused ped.");
                         menu.AddItem(DismissAction);
-                        menuItem.Action = DismissAction;
+                        menuItem.Action = Settings.Actions.Dismiss;
+                        menuItem.UIMenuItem = DismissAction;
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "rollWindowDown")
+                    if (menuItem.MenuPrompt.Attribute("action").Value == "RollWindowDown")
                     {
-                        RollWindowDownAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes the ped roll down their window");
-                        menu.AddItem(RollWindowDownAction);
-                        menuItem.Action = RollWindowDownAction;
+                        RollDownWindowAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes the ped roll down their window");
+                        menu.AddItem(RollDownWindowAction);
+                        menuItem.Action = Settings.Actions.RollWindowDown;
+                        menuItem.UIMenuItem = RollDownWindowAction;
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "turnOffEngine")
+                    if (menuItem.MenuPrompt.Attribute("action").Value == "TurnOffEngine")
                     {
                         TurnOffEngineAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped turn off the engine");
                         menu.AddItem(TurnOffEngineAction);
-                        menuItem.Action = TurnOffEngineAction;
+                        menuItem.Action = Settings.Actions.TurnOffEngine;
+                        menuItem.UIMenuItem = TurnOffEngineAction;
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "exitVehicle")
+                    if (menuItem.MenuPrompt.Attribute("action").Value == "ExitVehicle")
                     {
                         ExitVehicleAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped exit the vehicle");
                         menu.AddItem(ExitVehicleAction);
-                        menuItem.Action = ExitVehicleAction;
+                        menuItem.Action = Settings.Actions.ExitVehicle;
+                        menuItem.UIMenuItem = ExitVehicleAction;
                     }
                     Actions.Add(menuItem);
-                    AssignFontColorFromAttribute(menuItem, menuItem.Action);
+                    AssignFontColorFromAttribute(menuItem, menuItem.UIMenuItem);
                 }
+                Game.LogTrivial($"Actions assigned: {Actions.Count()}");
             }
 
             void DisableIrrelevantActions()
@@ -344,31 +356,31 @@ namespace BetterPedInteractions
                 {
                     if (PedHandler.FocusedPed.Ped && !PedHandler.FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "On Foot")
                     {
-                        action.Action.Enabled = true;
+                        action.UIMenuItem.Enabled = true;
                     }
                     else if (PedHandler.FocusedPed.Ped && PedHandler.FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "On Foot")
                     {
-                        action.Action.Enabled = false;
+                        action.UIMenuItem.Enabled = false;
                     }
 
                     if (PedHandler.FocusedPed.Ped && PedHandler.FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "In Vehicle")
                     {
                         Game.LogTrivial($"{action.MenuPrompt.Value} is enabled.");
-                        action.Action.Enabled = true;
+                        action.UIMenuItem.Enabled = true;
                     }
                     else if (PedHandler.FocusedPed.Ped && !PedHandler.FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "In Vehicle")
                     {
-                        action.Action.Enabled = false;
+                        action.UIMenuItem.Enabled = false;
                     }
 
                     // This is a different reason to change
-                    if (!action.Action.Enabled)
+                    if (!action.UIMenuItem.Enabled)
                     {
-                        action.Action.HighlightedBackColor = Color.White;
+                        action.UIMenuItem.HighlightedBackColor = Color.White;
                     }
                     else
                     {
-                        action.Action.HighlightedBackColor = action.Action.ForeColor;
+                        action.UIMenuItem.HighlightedBackColor = action.UIMenuItem.ForeColor;
                     }
                 }
             }
@@ -559,7 +571,7 @@ namespace BetterPedInteractions
                 return;
             }
 
-            if (selectedItem == RollWindowDownAction && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
+            if (selectedItem == RollDownWindowAction && focusedPed.Ped.CurrentVehicle && focusedPed.Ped.CurrentVehicle.IsCar)
             {
                 focusedPed.RollDownWindow();
                 return;
