@@ -1,18 +1,19 @@
-﻿using Rage;
+﻿using BetterPedInteractions.Utils;
+using Rage;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Xml.Linq;
 using static BetterPedInteractions.Settings;
 
-namespace BetterPedInteractions
+namespace BetterPedInteractions.Objects
 {
     internal class CollectedPed
     {
         internal Ped Ped { get; private set; }
         internal Blip Blip { get; private set; }
         internal Settings.Group Group { get; set; }
-        internal ResponseType ResponseType { get; set; } = ResponseType.Unspecified;
+        internal ResponseHonesty ResponseHonesty { get; set; } = ResponseHonesty.Unspecified;
         internal Dictionary<XElement, XElement> UsedQuestions { get; set; } = new Dictionary<XElement, XElement>();
         internal string Gender { get; private set; }
         internal bool Following { get; private set; } = false;
@@ -331,12 +332,14 @@ namespace BetterPedInteractions
         {
             Ped.Tasks.FollowToOffsetFromEntity(Game.LocalPlayer.Character, 1.5f * Vector3.WorldSouth);
             Following = true;
+            Game.LogTrivial($"{Ped.Model.Name} following player.");
         }
 
         internal void StopFollowing()
         {
             Ped.Tasks.Clear();
             Following = false;
+            Game.LogTrivial($"{Ped.Model.Name} following player.");
         }
 
         internal void TurnOffEngine()
@@ -415,8 +418,8 @@ namespace BetterPedInteractions
                 }
                 Ped.BlockPermanentEvents = false;
             }
-            EntryPoint.collectedPeds.Remove(this);
-            EntryPoint.focusedPed = null;
+            PedHandler.CollectedPeds.Remove(this);
+            PedHandler.FocusedPed = null;
 
             void DeleteBlip()
             {
@@ -439,9 +442,9 @@ namespace BetterPedInteractions
                 Dismiss();
                 return;
             }
-            else if (EntryPoint.collectedPeds.Contains(this))
+            else if (PedHandler.CollectedPeds.Contains(this))
             {
-                EntryPoint.collectedPeds.Remove(this);
+                PedHandler.CollectedPeds.Remove(this);
                 Game.LogTrivial($"An invalid ped has been removed from the collection.");
                 return;
             }
