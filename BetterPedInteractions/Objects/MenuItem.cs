@@ -15,7 +15,8 @@ namespace BetterPedInteractions
         internal XElement MenuPrompt { get; set; }
         internal List<XElement> Responses { get; set; } = new List<XElement>();
         internal List<string> AudioPrompts { get; set; } = new List<string>();
-        internal UIMenuItem Action { get; set; } = null;
+        internal Settings.Actions Action { get; set; } = Settings.Actions.None;
+        internal UIMenuItem UIMenuItem { get; set; }
         internal bool Highlighted { get; set; } = false;
 
         internal MenuItem(XElement element, ParentCategory parentCategory, SubCategory subCategory = null)
