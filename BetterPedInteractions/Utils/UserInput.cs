@@ -64,10 +64,10 @@ namespace BetterPedInteractions.Utils
 
             bool MenuKeysPressed()
             {
-                if ((Settings.ModifierKey == Keys.None && Game.IsKeyDown(Settings.ToggleKey)) ||
-                    (Game.IsKeyDownRightNow(Settings.ModifierKey) && Game.IsKeyDown(Settings.ToggleKey)) ||
-                    (Settings.ModifierButton == ControllerButtons.None && Game.IsControllerButtonDown(Settings.ToggleButton)) ||
-                    (Game.IsControllerButtonDownRightNow(Settings.ModifierButton) && Game.IsControllerButtonDown(Settings.ToggleButton)))
+                if ((Settings.MenuModifierKey == Keys.None && Game.IsKeyDown(Settings.MenuKey)) ||
+                    (Game.IsKeyDownRightNow(Settings.MenuModifierKey) && Game.IsKeyDown(Settings.MenuKey)) ||
+                    (Settings.MenuModifierButton == ControllerButtons.None && Game.IsControllerButtonDown(Settings.MenuButton)) ||
+                    (Game.IsControllerButtonDownRightNow(Settings.MenuModifierButton) && Game.IsControllerButtonDown(Settings.MenuButton)))
                 {
                     return true;
                 }
