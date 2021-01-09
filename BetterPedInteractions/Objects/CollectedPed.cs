@@ -1,11 +1,12 @@
-﻿using Rage;
+﻿using BetterPedInteractions.Utils;
+using Rage;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Xml.Linq;
 using static BetterPedInteractions.Settings;
 
-namespace BetterPedInteractions
+namespace BetterPedInteractions.Objects
 {
     internal class CollectedPed
     {
@@ -415,8 +416,8 @@ namespace BetterPedInteractions
                 }
                 Ped.BlockPermanentEvents = false;
             }
-            EntryPoint.CollectedPeds.Remove(this);
-            EntryPoint.FocusedPed = null;
+            PedHandler.CollectedPeds.Remove(this);
+            PedHandler.FocusedPed = null;
 
             void DeleteBlip()
             {
@@ -439,9 +440,9 @@ namespace BetterPedInteractions
                 Dismiss();
                 return;
             }
-            else if (EntryPoint.CollectedPeds.Contains(this))
+            else if (PedHandler.CollectedPeds.Contains(this))
             {
-                EntryPoint.CollectedPeds.Remove(this);
+                PedHandler.CollectedPeds.Remove(this);
                 Game.LogTrivial($"An invalid ped has been removed from the collection.");
                 return;
             }
