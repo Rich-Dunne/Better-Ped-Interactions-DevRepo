@@ -60,6 +60,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ResponseManager.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="Utils\PedHandler.cs" />
+    <Compile Include="Utils\UserInput.cs" />
     <Compile Include="VocalInterface.cs" />
     <Compile Include="Utils\XMLReader.cs" />
   </ItemGroup>
