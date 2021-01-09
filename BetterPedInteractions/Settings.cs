@@ -6,6 +6,16 @@ namespace BetterPedInteractions
 {
     internal static class Settings
     {
+        internal enum Actions
+        {
+            None = 0,
+            Follow = 1,
+            Dismiss = 2,
+            RollWindowDown = 3,
+            TurnOffEngine = 4,
+            ExitVehicle = 5
+        }
+
         internal enum Group
         {
             Civilian = 0,
@@ -26,17 +36,17 @@ namespace BetterPedInteractions
             Lie = 2
         }
 
-        internal static Keys ToggleKey = Keys.E;
-        internal static Keys ModifierKey = Keys.LShiftKey;
-        internal static ControllerButtons ToggleButton = ControllerButtons.Y;
-        internal static ControllerButtons ModifierButton = ControllerButtons.A;
+        internal static Keys MenuKey = Keys.E;
+        internal static Keys MenuModifierKey = Keys.LShiftKey;
+        internal static ControllerButtons MenuButton = ControllerButtons.Y;
+        internal static ControllerButtons MenuModifierButton = ControllerButtons.A;
         internal static Keys SpeechKey = Keys.LMenu;
         internal static Keys SpeechKeyModifier = Keys.None;
         internal static ControllerButtons SpeechButton = ControllerButtons.DPadUp;
         internal static ControllerButtons SpeechButtonModifier = ControllerButtons.None;
         internal static float InteractDistance = 1.5f;
         internal static string SpeechLanguage = "en-US";
-        internal static bool EnableAgitation = true;
+        internal static bool EnableAgitation = false;
         internal static int IncreaseAgitationAmount = 5, DecreaseAgitationAmount = 2, RepeatedAgitationAmount = 1, NervousThreshold = 40, StopRespondingThreshold = 60,
              FleeAttackThreshold = 80;
 
@@ -45,17 +55,17 @@ namespace BetterPedInteractions
             Game.LogTrivial("Loading BetterPedInteractions.ini settings");
             InitializationFile ini = new InitializationFile("Plugins/BetterPedInteractions.ini");
             ini.Create();
-            ToggleKey = ini.ReadEnum("Keybindings", "ToggleKey", Keys.E);
-            ModifierKey = ini.ReadEnum("Keybindings", "ModifierKey", Keys.LShiftKey);
-            ToggleButton = ini.ReadEnum("Keybindings", "ToggleButton", ControllerButtons.LeftShoulder);
-            ModifierButton = ini.ReadEnum("Keybindings", "ModifierButton", ControllerButtons.DPadDown);
+            MenuKey = ini.ReadEnum("Keybindings", "ToggleKey", Keys.E);
+            MenuModifierKey = ini.ReadEnum("Keybindings", "ModifierKey", Keys.LShiftKey);
+            MenuButton = ini.ReadEnum("Keybindings", "ToggleButton", ControllerButtons.LeftShoulder);
+            MenuModifierButton = ini.ReadEnum("Keybindings", "ModifierButton", ControllerButtons.DPadDown);
             SpeechKey = ini.ReadEnum("Keybindings", "SpeechKey", Keys.LMenu);
             SpeechKeyModifier = ini.ReadEnum("KeyBindings", "SpeechKeyModifier", Keys.None);
             SpeechButton = ini.ReadEnum("Keybindings", "SpeechButton", ControllerButtons.DPadUp);
             SpeechButtonModifier = ini.ReadEnum("Keybindings", "SpeechButtonModifier", ControllerButtons.None);
             InteractDistance = (float)ini.ReadDouble("Other Settings", "InteractDistance", 2f);
             SpeechLanguage = ini.ReadString("Other Settings", "SpeechLanguage", "en-US");
-            EnableAgitation = ini.ReadBoolean("Agitation Settings", "EnableAgitation", true);
+            EnableAgitation = ini.ReadBoolean("Agitation Settings", "EnableAgitation", false);
             IncreaseAgitationAmount = ini.ReadInt32("Agitation Settings", "IncreaseAgitationAmount", 5);
             DecreaseAgitationAmount = ini.ReadInt32("Agitation Settings", "DecreaseAgitationAmount", 2);
             RepeatedAgitationAmount = ini.ReadInt32("Agitation Settings", "RepeatedAgitationAmount", 1);
