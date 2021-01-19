@@ -534,15 +534,6 @@ namespace BetterPedInteractions
             return allMenuItems;
         }
 
-        private static List<MenuItem> GetAllMenuItems()
-        {
-            var allMenuItems = ParentCategories.SelectMany(x => x.MenuItems).ToList();
-            var subCategories = ParentCategories.SelectMany(x => x.SubCategories);
-            var subCategoryMenuItems = subCategories.SelectMany(x => x.MenuItems).ToList();
-            allMenuItems.AddRange(subCategoryMenuItems);
-            return allMenuItems;
-        }
-
         private static void MenuItem_OnCheckboxChanged(UIMenu menu, UIMenuCheckboxItem checkboxItem, bool @checked)
         {
             var focusedPed = PedHandler.FocusedPed;
