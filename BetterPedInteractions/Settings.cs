@@ -55,10 +55,10 @@ namespace BetterPedInteractions
             Game.LogTrivial("Loading BetterPedInteractions.ini settings");
             InitializationFile ini = new InitializationFile("Plugins/BetterPedInteractions.ini");
             ini.Create();
-            MenuKey = ini.ReadEnum("Keybindings", "ToggleKey", Keys.E);
-            MenuModifierKey = ini.ReadEnum("Keybindings", "ModifierKey", Keys.LShiftKey);
-            MenuButton = ini.ReadEnum("Keybindings", "ToggleButton", ControllerButtons.LeftShoulder);
-            MenuModifierButton = ini.ReadEnum("Keybindings", "ModifierButton", ControllerButtons.DPadDown);
+            MenuKey = ini.ReadEnum("Keybindings", "MenuKey", Keys.E);
+            MenuModifierKey = ini.ReadEnum("Keybindings", "MenuModifierKey", Keys.LShiftKey);
+            MenuButton = ini.ReadEnum("Keybindings", "MenuButton", ControllerButtons.LeftShoulder);
+            MenuModifierButton = ini.ReadEnum("Keybindings", "MenuModifierButton", ControllerButtons.DPadDown);
             SpeechKey = ini.ReadEnum("Keybindings", "SpeechKey", Keys.LMenu);
             SpeechKeyModifier = ini.ReadEnum("KeyBindings", "SpeechKeyModifier", Keys.None);
             SpeechButton = ini.ReadEnum("Keybindings", "SpeechButton", ControllerButtons.DPadUp);
