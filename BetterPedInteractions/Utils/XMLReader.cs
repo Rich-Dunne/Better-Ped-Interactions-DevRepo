@@ -83,25 +83,47 @@ namespace BetterPedInteractions
                     newMenuItem = new MenuItem(menuItem, subCategory.ParentCategory, subCategory);
                     newMenuItem.MenuPrompt = menuItem.Element("MenuPrompt");
                     subCategory.MenuItems.Add(newMenuItem);
+                    if (category.Elements("EnableByDefault").Any())
+                    {
+                        bool.TryParse(category.Element("EnableByDefault").Value.ToLower(), out bool result);
+                        subCategory.Enabled = result;
+                    }
                 }
                 else
                 {
                     newMenuItem = new MenuItem(menuItem, parentCategory);
                     newMenuItem.MenuPrompt = menuItem.Element("MenuPrompt");
                     parentCategory.MenuItems.Add(newMenuItem);
+                    if (category.Elements("EnableByDefault").Any())
+                    {
+                        bool.TryParse(category.Element("EnableByDefault").Value.ToLower(), out bool result);
+                        parentCategory.Enabled = result;
+                    }
                 }
-                if(menuItem.Attribute("action") != null)
+                if (menuItem.Elements("Action").Any())
                 {
-                    Enum.TryParse(menuItem.Attribute("action").Value, out Settings.Actions action);
+                    Enum.TryParse(menuItem.Element("Action").Value, out Settings.Actions action);
                     newMenuItem.Action = action;
+                    //Game.LogTrivial($"Assigned action {menuItem.Element("Action").Value} to menu item.");
                 }
-                if (menuItem.Attribute("enableByDefault") != null)
+                if (menuItem.Elements("EnableByDefault").Any())
                 {
-                    newMenuItem.Enabled = bool.Parse(menuItem.Attribute("enableByDefault").Value);
+                    bool.TryParse(menuItem.Element("EnableByDefault").Value, out bool result);
+                    newMenuItem.Enabled = result;
                 }
+                //if(menuItem.Attribute("action") != null)
+                //{
+                //    Enum.TryParse(menuItem.Attribute("action").Value, out Settings.Actions action);
+                //    newMenuItem.Action = action;
+                //}
+                //if (menuItem.Attribute("enableByDefault") != null)
+                //{
+                //    newMenuItem.Enabled = bool.Parse(menuItem.Attribute("enableByDefault").Value);
+                //}
                 if (menuItem.Element("Level") != null)
                 {
-                    newMenuItem.Level = int.Parse(menuItem.Element("Level").Value);
+                    int.TryParse(menuItem.Element("Level").Value, out int result);
+                    newMenuItem.Level = result;
                 }
                 if(newMenuItem.MenuPrompt != null)
                 {
