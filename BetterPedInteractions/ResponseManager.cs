@@ -62,12 +62,12 @@ namespace BetterPedInteractions
 
             void EnableDialoguePathFromPrompt()
             {
-                if (matchingPrompt.MenuPrompt.Attribute("enablesDialoguePath") != null)
+                if (matchingPrompt.MenuPrompt.Parent.Elements("DialoguePathToEnable").Any())
                 {
                     //Game.LogTrivial($"This prompt should unlock a menu");
                     // Check for matching main category
                     var menuItems = GetAllMenuItems();
-                    var menuItemsWithMatchingDialoguePath = menuItems.Where(x => x.MenuPrompt.Attribute("dialoguePath") != null && x.MenuPrompt.Attribute("dialoguePath").Value == matchingPrompt.MenuPrompt.Attribute("enablesDialoguePath").Value);
+                    var menuItemsWithMatchingDialoguePath = menuItems.Where(x => x.MenuPrompt.Parent.Elements("BelongsToDialoguePath").Any() && x.MenuPrompt.Parent.Element("BelongsToDialoguePath").Value == matchingPrompt.MenuPrompt.Parent.Element("DialoguePathToEnable").Value);
 
                     if (menuItemsWithMatchingDialoguePath.Count() > 0)
                     {
@@ -78,18 +78,18 @@ namespace BetterPedInteractions
                     }
                     else
                     {
-                        Game.LogTrivial($"No matching menu items found with dialogue path: {matchingPrompt.MenuPrompt.Attribute("enablesDialoguePath").Value}");
+                        Game.LogTrivial($"No matching menu items found with dialogue path: {matchingPrompt.MenuPrompt.Parent.Element("DialoguePathToEnable").Value}");
                     }
                 }
             }
 
             void EnableCategoryFromPrompt()
             {
-                if (matchingPrompt.MenuPrompt.Attribute("enablesCategory") != null)
+                if (matchingPrompt.MenuPrompt.Parent.Elements("CategoryToEnable").Any())
                 {
                     //Game.LogTrivial($"This prompt should unlock a menu");
                     // Check for matching main category
-                    var matchingCategoryToEnable = ParentCategories.FirstOrDefault(x => x.Name.Value == matchingPrompt.MenuPrompt.Attribute("enablesCategory").Value);
+                    var matchingCategoryToEnable = ParentCategories.FirstOrDefault(x => x.Name.Value == matchingPrompt.MenuPrompt.Parent.Element("CategoryToEnable").Value);
 
                     // Check for matching sub category
                     if (matchingCategoryToEnable != null)
@@ -98,14 +98,14 @@ namespace BetterPedInteractions
                     }
                     else
                     {
-                        var matchingSubCategoryToEnable = ParentCategories.SelectMany(x => x.SubCategories).FirstOrDefault(x => x.Name.Value == matchingPrompt.MenuPrompt.Attribute("enablesCategory").Value);
+                        var matchingSubCategoryToEnable = ParentCategories.SelectMany(x => x.SubCategories).FirstOrDefault(x => x.Name.Value == matchingPrompt.MenuPrompt.Parent.Element("CategoryToEnable").Value);
                         if (matchingSubCategoryToEnable != null)
                         {
                             matchingSubCategoryToEnable.Enabled = true;
                         }
                         else
                         {
-                            Game.LogTrivial($"No matching category found: {matchingPrompt.MenuPrompt.Attribute("enablesCategory").Value}");
+                            Game.LogTrivial($"No matching category found: {matchingPrompt.MenuPrompt.Parent.Element("CategoryToEnable").Value}");
                         }
                     }
                 }
@@ -114,7 +114,7 @@ namespace BetterPedInteractions
 
         private static void ChoosePedResponse(MenuItem prompt)
         {
-            if(prompt.Action != null)
+            if(prompt.Action != Actions.None)
             {
                 PerformPedAction();
                 return;
@@ -297,13 +297,12 @@ namespace BetterPedInteractions
 
             void EnableCategory()
             {
-                if (prompt.Element.Attribute("enablesCategory") != null)
+                if (prompt.MenuPrompt.Parent.Elements("CategoryToEnable").Any())
                 {
                     var allMenuItems = GetAllMenuItems();
-                    var menuItemsWithCategoriesToEnable = allMenuItems.Where(x => (x.ParentCategory.Name.Value == prompt.Element.Attribute("enablesCategory").Value || x.SubCategory?.Name.Value == prompt.Element.Attribute("enablesCategory").Value) && x.ParentCategory.File == prompt.ParentCategory.File).Distinct();
-                    var parentCategoriesToEnable = menuItemsWithCategoriesToEnable.Where(x => !x.ParentCategory.Enabled).Select(x => x.ParentCategory).ToList();
-                    var subCategoriesToEnable = menuItemsWithCategoriesToEnable.Where(x => x.SubCategory != null && !x.SubCategory.Enabled).Select(x => x.SubCategory).ToList();
-                    //Game.LogTrivial($"Categories to be enabled: {categoriesToBeEnabled.Count()}");
+                    var parentCategoriesToEnable = ParentCategories.Where(x => x.Name.Value == prompt.MenuPrompt.Parent.Element("CategoryToEnable").Value && x.File == prompt.ParentCategory.File);
+                    var subCategoriesToEnable = ParentCategories.SelectMany(x => x.SubCategories.Where(y => y.Name.Value == prompt.MenuPrompt.Parent.Element("CategoryToEnable").Value && x.File == prompt.ParentCategory.File));
+
                     foreach (ParentCategory parentCategory in parentCategoriesToEnable)
                     {
                         //Game.LogTrivial($"Category: {category.Name.Value}, File: {category.File}");
@@ -324,10 +323,11 @@ namespace BetterPedInteractions
             {
                 var newDialogueOptions = new List<MenuItem>();
                 var allMenuItems = GetAllMenuItems();
+
                 if (response.Attribute("enablesDialoguePath") != null)
                 {
                     Game.LogTrivial($"Enabling dialogue path {response.Attribute("enablesDialoguePath").Value}");                    
-                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => (x.Element.Attribute("dialoguePath") != null && response.Attribute("enablesDialoguePath") != null && (x.Element.Attribute("dialoguePath").Value == response.Attribute("enablesDialoguePath").Value) || prompt.MenuPrompt.Attribute("enablesDialoguePath") != null && x.Element.Attribute("dialoguePath").Value == prompt.MenuPrompt.Attribute("enablesDialoguePath").Value));
+                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => (x.MenuPrompt.Parent.Elements("BelongsToDialoguePath").Any() && response.Attribute("enablesDialoguePath") != null && (x.MenuPrompt.Parent.Element("BelongsToDialoguePath").Value == response.Attribute("enablesDialoguePath").Value) || prompt.MenuPrompt.Parent.Elements("DialoguePathToEnable").Any() && x.MenuPrompt.Parent.Element("DialoguePathToEnable").Value == prompt.MenuPrompt.Parent.Element("DialoguePathToEnable").Value));
                     
                     foreach (MenuItem menuItem in itemsWithPathToBeEnabled)
                     {
@@ -336,10 +336,10 @@ namespace BetterPedInteractions
                         menuItem.Enabled = true;
                     }
                 }
-                else if (prompt.Element.Attribute("enablesDialoguePath") != null)
+                else if (prompt.MenuPrompt.Parent.Elements("DialoguePathToEnable").Any())
                 {
-                    Game.LogTrivial($"Enabling dialogue path {prompt.Element.Attribute("enablesDialoguePath").Value}");
-                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => x.Element.Attribute("dialoguePath") != null && x.Element.Attribute("dialoguePath").Value == prompt.Element.Attribute("enablesDialoguePath").Value);
+                    Game.LogTrivial($"Enabling dialogue path {prompt.MenuPrompt.Parent.Element("DialoguePathToEnable").Value}");
+                    var itemsWithPathToBeEnabled = allMenuItems.Where(x => x.MenuPrompt.Parent.Elements("DialoguePathToEnable").Any() && x.MenuPrompt.Parent.Element("DialoguePathToEnable").Value == prompt.MenuPrompt.Parent.Element("DialoguePathToEnable").Value);
 
                     foreach (MenuItem menuItem in itemsWithPathToBeEnabled)
                     {
