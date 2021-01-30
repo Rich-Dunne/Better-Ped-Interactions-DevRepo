@@ -58,11 +58,11 @@ namespace BetterPedInteractions
         internal static void InitializeActionMenuItems()
         {
             // ISSUE: Assigning actions to menu items does not seem to be applying to the original menu items in ParentCategories
-            foreach (MenuItem menuItem in ParentCategories.SelectMany(x => x.MenuItems.Where(y => y.MenuPrompt != null && y.MenuPrompt.Attribute("action") != null)))
+            foreach (MenuItem menuItem in ParentCategories.SelectMany(x => x.MenuItems.Where(y => y.MenuPrompt != null && y.MenuPrompt.Elements("Action").Any())))
             //foreach (MenuItem menuItem in GetAllMenuItems()?.Where(x => x.MenuPrompt != null && x.MenuPrompt.Attribute("action") != null))
             {
                 Game.LogTrivial($"Assigning action for {menuItem.MenuPrompt.Value}");
-                if (menuItem.MenuPrompt.Attribute("action").Value == "Follow")
+                if (menuItem.MenuPrompt.Element("Action").Value == "Follow")
                 {
                     FollowMeAction = new UIMenuCheckboxItem(menuItem.MenuPrompt.Value, false, "Makes the ped follow the player");
                     Actions.Add(menuItem);
@@ -277,9 +277,9 @@ namespace BetterPedInteractions
                     subCategory = menu.MenuItems[1] as UIMenuListScrollerItem<string>;
                 }
                 Actions.Clear();
-                foreach (MenuItem menuItem in actions?.Where(x => x.Enabled && x.MenuPrompt != null && x.MenuPrompt.Attribute("action") != null && x.SubCategory.Name.Value == subCategory?.OptionText))
+                foreach (MenuItem menuItem in actions?.Where(x => x.Enabled && x.MenuPrompt != null && x.MenuPrompt.Parent.Elements("Action").Any() && x.SubCategory.Name.Value == subCategory?.OptionText))
                 {
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "Follow")
+                    if (menuItem.MenuPrompt.Parent.Element("Action").Value == "Follow")
                     {
                         bool followingActionBool = false;
                         if(PedHandler.FocusedPed != null)
@@ -291,28 +291,28 @@ namespace BetterPedInteractions
                         menuItem.UIMenuItem = FollowMeAction;
                         menu.AddItem(FollowMeAction);
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "Dismiss")
+                    if (menuItem.MenuPrompt.Parent.Element("Action").Value == "Dismiss")
                     {
                         DismissAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Dismisses the focused ped.");
                         menuItem.Action = Settings.Actions.Dismiss;
                         menuItem.UIMenuItem = DismissAction;
                         menu.AddItem(DismissAction);
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "RollWindowDown")
+                    if (menuItem.MenuPrompt.Parent.Element("Action").Value == "RollWindowDown")
                     {
                         RollDownWindowAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes the ped roll down their window");
                         menuItem.Action = Settings.Actions.RollWindowDown;
                         menuItem.UIMenuItem = RollDownWindowAction;
                         menu.AddItem(RollDownWindowAction);
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "TurnOffEngine")
+                    if (menuItem.MenuPrompt.Parent.Element("Action").Value == "TurnOffEngine")
                     {
                         TurnOffEngineAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped turn off the engine");
                         menuItem.Action = Settings.Actions.TurnOffEngine;
                         menuItem.UIMenuItem = TurnOffEngineAction;
                         menu.AddItem(TurnOffEngineAction);
                     }
-                    if (menuItem.MenuPrompt.Attribute("action").Value == "ExitVehicle")
+                    if (menuItem.MenuPrompt.Parent.Element("Action").Value == "ExitVehicle")
                     {
                         ExitVehicleAction = new UIMenuItem(menuItem.MenuPrompt.Value, "Makes ped exit the vehicle");
                         menuItem.Action = Settings.Actions.ExitVehicle;
@@ -357,7 +357,7 @@ namespace BetterPedInteractions
                     }
                 }
 
-                foreach (MenuItem action in Actions.Where(x => x.MenuPrompt.Attribute("action").Value != "follow" && x.MenuPrompt.Attribute("action").Value != "dismiss"))
+                foreach (MenuItem action in Actions.Where(x => x.MenuPrompt.Parent.Element("Action").Value != "Follow" && x.MenuPrompt.Parent.Element("Action").Value != "Dismiss"))
                 {
                     if (PedHandler.FocusedPed.Ped && !PedHandler.FocusedPed.Ped.CurrentVehicle && action.SubCategory.Name.Value == "On Foot")
                     {
@@ -411,18 +411,18 @@ namespace BetterPedInteractions
             void AssignFontColorFromAttribute(MenuItem menuItem, UIMenuItem uiMenuItem)
             {
                 var attribute = menuItem.MenuPrompt.Attribute("type");
-                if (menuItem.MenuPrompt.Attribute("type") != null)
+                if (menuItem.MenuPrompt.Parent.Elements("PromptType").Any())
                 {
-                    if (attribute.Value.ToLower() == "interview")
+                    if (menuItem.MenuPrompt.Parent.Element("PromptType").Value.ToLower() == "interview")
                     {
                         uiMenuItem.ForeColor = Color.LimeGreen;
                     }
-                    else if (attribute.Value.ToLower() == "interrogation")
+                    else if (menuItem.MenuPrompt.Parent.Element("PromptType").Value.ToLower() == "interrogation")
                     {
                         uiMenuItem.ForeColor = Color.IndianRed;
                     }
                 }
-                if (menuItem.MenuPrompt.Attribute("action") != null)
+                if (menuItem.MenuPrompt.Parent.Elements("Action").Any())
                 {
                     uiMenuItem.ForeColor = Color.Gold;
                 }
