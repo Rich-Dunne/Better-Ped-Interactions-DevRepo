@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Objects\CollectedPed.cs" />
+    <Compile Include="Objects\DialogueMenu.cs" />
     <Compile Include="Utils\ConsoleCommands.cs" />
     <Compile Include="Utils\DamerauLevensteinMetric.cs" />
     <Compile Include="EntryPoint.cs" />
@@ -60,10 +61,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ResponseManager.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="Utils\Extensions.cs" />
     <Compile Include="Utils\PedHandler.cs" />
     <Compile Include="Utils\UserInput.cs" />
     <Compile Include="VocalInterface.cs" />
-    <Compile Include="Utils\XMLReader.cs" />
+    <Compile Include="Utils\XMLManager.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterCompile">

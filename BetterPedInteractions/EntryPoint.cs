@@ -20,12 +20,9 @@ namespace BetterPedInteractions
         {
             AppDomain.CurrentDomain.DomainUnload += MyTerminationHandler;
             Settings.LoadSettings();
-            MenuManager.InitializeMenus();
             VocalInterface.Initialize();
-            XMLReader.ReadFromDirectory(DEFAULT_DIRECTORY);
-            XMLReader.ReadFromDirectory(CUSTOM_DIRECTORY);
-            MenuManager.PopulateCategoryScrollers();
-            MenuManager.InitialMenuPopulation();
+            XMLManager.ReadXMLsFromDirectory(DEFAULT_DIRECTORY);
+            XMLManager.ReadXMLsFromDirectory(CUSTOM_DIRECTORY);
             GetAssemblyVersion();
             GameFiber.StartNew(() => UserInput.HandleUserInput(), "Handle User Input");
 

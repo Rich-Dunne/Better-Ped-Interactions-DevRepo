@@ -44,11 +44,16 @@ namespace BetterPedInteractions
         internal static Keys SpeechKeyModifier = Keys.None;
         internal static ControllerButtons SpeechButton = ControllerButtons.DPadUp;
         internal static ControllerButtons SpeechButtonModifier = ControllerButtons.None;
+        internal static bool EnablePTT = false;
         internal static float InteractDistance = 1.5f;
         internal static string SpeechLanguage = "en-US";
         internal static bool EnableAgitation = false;
-        internal static int IncreaseAgitationAmount = 5, DecreaseAgitationAmount = 2, RepeatedAgitationAmount = 1, NervousThreshold = 40, StopRespondingThreshold = 60,
-             FleeAttackThreshold = 80;
+        internal static int IncreaseAgitationAmount = 5, 
+                            DecreaseAgitationAmount = 2, 
+                            RepeatedAgitationAmount = 1, 
+                            NervousThreshold = 40, 
+                            StopRespondingThreshold = 60,
+                            FleeAttackThreshold = 80;
 
         internal static void LoadSettings()
         {
@@ -63,8 +68,12 @@ namespace BetterPedInteractions
             SpeechKeyModifier = ini.ReadEnum("KeyBindings", "SpeechKeyModifier", Keys.None);
             SpeechButton = ini.ReadEnum("Keybindings", "SpeechButton", ControllerButtons.DPadUp);
             SpeechButtonModifier = ini.ReadEnum("Keybindings", "SpeechButtonModifier", ControllerButtons.None);
-            InteractDistance = (float)ini.ReadDouble("Other Settings", "InteractDistance", 2f);
-            SpeechLanguage = ini.ReadString("Other Settings", "SpeechLanguage", "en-US");
+
+            // Vocal Interface Settings
+            SpeechLanguage = ini.ReadString("Vocal Interface Settings", "SpeechLanguage", "en-US");
+            EnablePTT = ini.ReadBoolean("Vocal Interface Settings", "EnablePTT", false);
+
+            // Agitation Settings
             EnableAgitation = ini.ReadBoolean("Agitation Settings", "EnableAgitation", false);
             IncreaseAgitationAmount = ini.ReadInt32("Agitation Settings", "IncreaseAgitationAmount", 5);
             DecreaseAgitationAmount = ini.ReadInt32("Agitation Settings", "DecreaseAgitationAmount", 2);
@@ -72,6 +81,9 @@ namespace BetterPedInteractions
             NervousThreshold = ini.ReadInt32("Agitation Settings", "NervousThreshold", 40);
             StopRespondingThreshold = ini.ReadInt32("Agitation Settings", "StopRespondingThreshold", 60);
             FleeAttackThreshold = ini.ReadInt32("Agitation Settings", "FleeAttackThreshold", 80);
+
+            // Other Settings
+            InteractDistance = (float)ini.ReadDouble("Other Settings", "InteractDistance", 2f);
 
             if (EnableAgitation)
             {

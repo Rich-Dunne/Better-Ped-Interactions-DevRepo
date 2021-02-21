@@ -49,9 +49,9 @@ namespace BetterPedInteractions
             SRE.SpeechRecognitionRejected += SRE_SpeechRecognitionRejected;
         }
 
-        internal static void StartRecognition()
+        internal static void StartRecognition(RecognizeMode recognizeMode)
         {
-            SRE.RecognizeAsync(RecognizeMode.Multiple);
+            SRE.RecognizeAsync(recognizeMode);
             GameFiber.StartNew(() => Process());
         }
 

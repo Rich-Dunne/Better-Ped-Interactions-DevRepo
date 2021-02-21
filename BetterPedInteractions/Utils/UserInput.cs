@@ -9,22 +9,39 @@ namespace BetterPedInteractions.Utils
         {
             while (true)
             {
-                if (AudioCaptureKeysPressed())
+                //Game.DisplaySubtitle($"Capturing input: {VocalInterface.CapturingInput}");
+                if (Settings.EnablePTT)
                 {
-                    VocalInterface.CapturingInput = !VocalInterface.CapturingInput;
-                    if (VocalInterface.CapturingInput)
+                    if (!VocalInterface.CapturingInput && AudioCaptureKeysPressed())
                     {
-                        VocalInterface.StartRecognition();
+                        VocalInterface.CapturingInput = true;
+                        VocalInterface.StartRecognition(System.Speech.Recognition.RecognizeMode.Single);
                     }
-                    else
+                    else if (VocalInterface.CapturingInput && !AudioCaptureKeysPressed())
                     {
+                        VocalInterface.CapturingInput = false;
                         VocalInterface.EndRecognition();
+                    }
+                }
+                else
+                {
+                    if (AudioCaptureKeysPressed())
+                    {
+                        VocalInterface.CapturingInput = !VocalInterface.CapturingInput;
+                        if (VocalInterface.CapturingInput)
+                        {
+                            VocalInterface.StartRecognition(System.Speech.Recognition.RecognizeMode.Multiple);
+                        }
+                        else
+                        {
+                            VocalInterface.EndRecognition();
+                        }
                     }
                 }
 
                 if (MenuKeysPressed())
                 {
-                    MenuManager.DisplayMenuForNearbyPed();
+                    MenuManager.DisplayNearbyPedMenu();
                 }
                 GameFiber.Yield();
             }
@@ -32,7 +49,7 @@ namespace BetterPedInteractions.Utils
 
         private static bool AudioCaptureKeysPressed()
         {
-            if (VocalInterface.AllowVoiceCapture && SpeechKeysPressed())
+            if (VocalInterface.AllowVoiceCapture && ((!Settings.EnablePTT && SpeechKeysPressed()) ||(Settings.EnablePTT && SpeechKeysHeldDown())))
             {
                 return true;
             }
@@ -51,6 +68,19 @@ namespace BetterPedInteractions.Utils
 
                 return false;
             }
+
+            bool SpeechKeysHeldDown()
+            {
+                if ((Settings.SpeechKeyModifier == Keys.None && Game.IsKeyDownRightNow(Settings.SpeechKey)) ||
+                    (Game.IsKeyDownRightNow(Settings.SpeechKeyModifier) && Game.IsKeyDownRightNow(Settings.SpeechKey)) ||
+                    (Settings.SpeechButtonModifier == ControllerButtons.None && Game.IsControllerButtonDownRightNow(Settings.SpeechButton)) ||
+                    (Game.IsControllerButtonDownRightNow(Settings.SpeechButtonModifier) && Game.IsControllerButtonDownRightNow(Settings.SpeechButton)))
+                {
+                    return true;
+                }
+
+                return false;
+            }
         }
 
         private static bool MenuKeysPressed()
@@ -59,7 +89,6 @@ namespace BetterPedInteractions.Utils
             {
                 return true;
             }
-
             return false;
 
             bool MenuKeysPressed()
